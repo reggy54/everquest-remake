@@ -1,0 +1,6 @@
+{
+  "name": "EverQuest III Chronicles",
+  "description": "An immersive fantasy MMORPG simulator mimicking ever-evolving multiplayer world events, deep fantasy lore, active party quests, raid battles, and live AI-driven chatbot interactions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
