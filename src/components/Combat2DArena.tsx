@@ -96,7 +96,7 @@ export default function Combat2DArena({
       // Add floating text
       tList.push({
         id: Math.random().toString(),
-        text: `-${amount} DMG`,
+        text: `-${amount} УРОН`,
         x: monsterX,
         y: monsterY - 30,
         vy: -1.5,
@@ -126,7 +126,7 @@ export default function Combat2DArena({
       setMonsterShake(6);
       tList.push({
         id: Math.random().toString(),
-        text: 'TAUNTED 🛡️',
+        text: 'АГГРО 🛡️',
         x: monsterX,
         y: monsterY - 40,
         vy: -1,
@@ -156,7 +156,7 @@ export default function Combat2DArena({
       // Launch a fireball from player to monster
       tList.push({
         id: Math.random().toString(),
-        text: `-${amount} Fire`,
+        text: `-${amount} Огонь`,
         x: monsterX,
         y: monsterY - 30,
         vy: -1.7,
@@ -193,7 +193,7 @@ export default function Combat2DArena({
       // Giant freezing meteor shower
       tList.push({
         id: Math.random().toString(),
-        text: `-${amount} Ice ❄️`,
+        text: `-${amount} Лед ❄️`,
         x: monsterX,
         y: monsterY - 30,
         vy: -1.4,
@@ -224,7 +224,7 @@ export default function Combat2DArena({
       // Green sacred halo
       tList.push({
         id: Math.random().toString(),
-        text: `+${amount} Heal`,
+        text: `+${amount} Лечение`,
         x: playerX,
         y: playerY - 30,
         vy: -1.2,
@@ -286,7 +286,7 @@ export default function Combat2DArena({
       
       tList.push({
         id: Math.random().toString(),
-        text: `-${amount} HP`,
+        text: `-${amount} ХП`,
         x: playerX,
         y: playerY - 30,
         vy: -1.5,
@@ -330,11 +330,8 @@ export default function Combat2DArena({
     let animId: number;
 
     const render = () => {
-      // Clear background
+      // Clear background to be completely transparent so CSS background shows
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Draw active zone backdrop
-      drawZoneBackground(ctx, canvas.width, canvas.height, activeZone.id);
 
       // Decrement shake values
       setMonsterShake((s) => Math.max(0, s - 1));
@@ -458,7 +455,7 @@ export default function Combat2DArena({
           ctx.fillText('💀', cx, cy);
           ctx.font = '8px monospace';
           ctx.fillStyle = '#ef4444';
-          ctx.fillText(`${member.name} down`, cx, cy - 15);
+          ctx.fillText(`${member.name} пал`, cx, cy - 15);
           ctx.restore();
         }
       });
@@ -506,7 +503,7 @@ export default function Combat2DArena({
       ctx.font = 'bold 11px monospace';
       ctx.fillStyle = '#fbbf24';
       ctx.textAlign = 'center';
-      ctx.fillText(`${character.name} (You)`, px, py - 40 + pbob);
+      ctx.fillText(`${character.name} (Вы)`, px, py - 40 + pbob);
 
       // HP bar
       const pBarW = 70;
@@ -590,75 +587,26 @@ export default function Combat2DArena({
     };
   }, [activeZone.id, combatMonster, combatParty, character]);
 
-  // Helper background painter
-  const drawZoneBackground = (
-    ctx: CanvasRenderingContext2D,
-    w: number,
-    h: number,
-    zoneId: string
-  ) => {
-    ctx.save();
-    
-    // Choose backgrounds based on zone ID
-    let grd = ctx.createLinearGradient(0, 0, 0, h);
-    if (zoneId === 'qeynos-hills') {
-      // Grassy day sky/ground
-      grd.addColorStop(0, '#020617');
-      grd.addColorStop(0.5, '#052e16');
-      grd.addColorStop(1, '#022c22');
-    } else if (zoneId === 'blackburrow') {
-      // Dark caverns
-      grd.addColorStop(0, '#090d16');
-      grd.addColorStop(0.7, '#1e1b4b');
-      grd.addColorStop(1, '#111827');
-    } else if (zoneId === 'lower-guk') {
-      // Damp toxic brick swamp
-      grd.addColorStop(0, '#030712');
-      grd.addColorStop(0.6, '#064e3b');
-      grd.addColorStop(1, '#022c22');
-    } else if (zoneId === 'east-commonlands') {
-      // Sandy desert night sky
-      grd.addColorStop(0, '#0c0a09');
-      grd.addColorStop(0.6, '#451a03');
-      grd.addColorStop(1, '#1c1917');
-    } else if (zoneId === 'castle-mistmoore') {
-      // Blood red gothic interior
-      grd.addColorStop(0, '#090514');
-      grd.addColorStop(0.6, '#7f1d1d');
-      grd.addColorStop(1, '#450a0a');
-    } else {
-      // Plane of Fear / General void
-      grd.addColorStop(0, '#0f051d');
-      grd.addColorStop(0.6, '#581c87');
-      grd.addColorStop(1, '#0c0415');
-    }
-
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, w, h);
-
-    // Grid details or stylized particles to represent retro JRPG floor
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    for (let r = 0; r < h; r += 20) {
-      ctx.fillRect(0, r, w, 1);
-    }
-    
-    // Draw horizontal barrier line separating backdrop
-    ctx.fillStyle = 'rgba(234, 179, 8, 0.15)';
-    ctx.fillRect(0, 220, w, 2);
-
-    ctx.restore();
-  };
+  // Helper background painter removed to let CSS background show through
 
   return (
-    <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden p-1 relative shadow-inner">
+    <div 
+      className="border border-slate-700/80 rounded-xl overflow-hidden relative shadow-2xl transition-all duration-700 group"
+      style={{ 
+        backgroundImage: `url('${activeZone.imageUrl || ''}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }}
+    >
+      <div className="absolute inset-0 bg-slate-950/70 group-hover:bg-slate-950/50 transition-colors duration-500"></div>
       <canvas
         ref={canvasRef}
         width={540}
         height={260}
-        className="block w-full h-[260px] bg-slate-950 rounded-lg border border-slate-900"
+        className="block w-full h-[260px] rounded-lg relative z-10 mix-blend-screen"
       />
-      <div className="absolute top-2 right-2 bg-slate-900/80 border border-slate-800 rounded px-2 py-0.5 text-[10px] text-slate-400 font-mono select-none">
-        Retro Arena 2D Active
+      <div className="absolute top-2 right-2 z-20 bg-slate-900/80 border border-amber-900/60 rounded px-2 py-0.5 text-[9px] text-amber-500 font-mono select-none drop-shadow-lg backdrop-blur flex items-center gap-1.5 uppercase font-bold tracking-widest">
+        <span>Arena Active</span>
       </div>
     </div>
   );

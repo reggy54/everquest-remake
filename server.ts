@@ -80,9 +80,171 @@ function addChatMessage(msg: Omit<SharedMessage, 'id' | 'timestamp'>) {
   return newMsg;
 }
 
+interface UserAccount {
+  username: string;
+  passwordHash: string;
+  isAdmin: boolean;
+  banned: boolean;
+}
+
+const userAccounts: Record<string, UserAccount> = {
+  "Reggy": {
+    username: "Reggy",
+    passwordHash: "Andron7691",
+    isAdmin: true,
+    banned: false
+  }
+};
+
+let serverSettings = {
+  status: 'online', // online, maintenance, event
+  multiplierXP: 1.0,
+  multiplierGold: 1.0,
+  activeEvent: 'Обычный режим',
+  announcement: 'Добро пожаловать в Хроники Открытого Мира!',
+};
+
 // REST Endpoints
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', serverTime: new Date().toISOString(), aiEnabled: !!ai });
+  res.json({ status: 'ok', serverTime: new Date().toISOString(), aiEnabled: !!ai, settings: serverSettings });
+});
+
+// Auth Endpoints
+app.post('/api/register', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Требуется ввести логин и пароль.' });
+  }
+
+  const uValue = username.trim();
+  const normalizedKey = uValue.toLowerCase();
+
+  const existing = Object.keys(userAccounts).find(k => k.toLowerCase() === normalizedKey);
+  if (existing) {
+    return res.status(400).json({ error: 'Это имя пользователя уже занято.' });
+  }
+
+  const isAdmin = (uValue.toLowerCase() === 'reggy' && password === 'Andron7691');
+
+  userAccounts[uValue] = {
+    username: uValue,
+    passwordHash: password,
+    isAdmin,
+    banned: false
+  };
+
+  res.json({
+    success: true,
+    user: { username: uValue, isAdmin }
+  });
+});
+
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Требуется ввести логин и пароль.' });
+  }
+
+  const uValue = username.trim();
+  const account = Object.values(userAccounts).find(acc => acc.username.toLowerCase() === uValue.toLowerCase());
+
+  if (!account) {
+    return res.status(400).json({ error: 'Персонаж / аккаунт с таким именем не найден.' });
+  }
+
+  if (account.passwordHash !== password) {
+    return res.status(400).json({ error: 'Неверный пароль.' });
+  }
+
+  if (account.banned) {
+    return res.status(403).json({ error: 'Данный аккаунт заблокирован Администрацией.' });
+  }
+
+  res.json({
+    success: true,
+    user: { username: account.username, isAdmin: account.isAdmin }
+  });
+});
+
+// Server Settings Get
+app.get('/api/server-settings', (req, res) => {
+  res.json(serverSettings);
+});
+
+// Admin Operations
+app.post('/api/admin/clear-chat', (req, res) => {
+  globalMessages.length = 0;
+  globalMessages.push({
+    id: `msg-clear-${Date.now()}`,
+    sender: 'СИСТЕМА',
+    channel: 'System',
+    text: 'Игровой чат был очищен главным куратором игры.',
+    timestamp: new Date().toLocaleTimeString(),
+  });
+  res.json({ success: true, messages: globalMessages });
+});
+
+app.post('/api/admin/announce', (req, res) => {
+  const { text, sender } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'Текст объявления пуст.' });
+  }
+  const announceMsg = addChatMessage({
+    sender: sender || 'АДМИНИСТРАТОР REGGY',
+    channel: 'Shout',
+    text: `📢 ГЛОБАЛЬНЫЙ АНОНС: ${text}`,
+  });
+  res.json({ success: true, message: announceMsg });
+});
+
+app.post('/api/admin/server-settings', (req, res) => {
+  const { status, multiplierXP, multiplierGold, activeEvent, announcement } = req.body;
+  
+  if (status !== undefined) serverSettings.status = status;
+  if (multiplierXP !== undefined) serverSettings.multiplierXP = Number(multiplierXP);
+  if (multiplierGold !== undefined) serverSettings.multiplierGold = Number(multiplierGold);
+  if (activeEvent !== undefined) serverSettings.activeEvent = activeEvent;
+  if (announcement !== undefined) serverSettings.announcement = announcement;
+
+  addChatMessage({
+    sender: 'СИСТЕМА',
+    channel: 'System',
+    text: `Параметры игрового мира изменены! Режим: "${serverSettings.activeEvent}". Умножитель Опыта: x${serverSettings.multiplierXP}, Золота: x${serverSettings.multiplierGold}.`,
+  });
+
+  res.json({ success: true, settings: serverSettings });
+});
+
+app.get('/api/admin/users', (req, res) => {
+  res.json({
+    users: Object.values(userAccounts).map(u => ({
+      username: u.username,
+      isAdmin: u.isAdmin,
+      banned: u.banned
+    }))
+  });
+});
+
+app.post('/api/admin/user-ban', (req, res) => {
+  const { username, ban } = req.body;
+  if (!username) return res.status(400).json({ error: 'Не указано имя пользователя.' });
+  
+  const account = Object.values(userAccounts).find(acc => acc.username.toLowerCase() === username.toLowerCase());
+  if (!account) return res.status(404).json({ error: 'Пользователь не найден.' });
+
+  if (account.username === 'Reggy') {
+    return res.status(400).json({ error: 'Невозможно заблокировать главного Администратора!' });
+  }
+
+  account.banned = !!ban;
+  
+  addChatMessage({
+    sender: 'СИСТЕМА',
+    channel: 'System',
+    text: `Персонаж ${account.username} был ${ban ? 'ЗАБЛОКИРОВАН' : 'РАЗБЛОКИРОВАН'} Администрацией.`,
+  });
+
+  res.json({ success: true, user: { username: account.username, banned: account.banned } });
 });
 
 // Chat get & post

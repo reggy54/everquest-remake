@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlayerCharacter, Zone } from '../types';
 import { MapPin, Compass, Shield, HelpCircle } from 'lucide-react';
 
 export interface MapEntity {
   id: string;
-  type: 'monster' | 'bot' | 'chest' | 'campfire' | 'portal';
+  type: 'monster' | 'bot' | 'chest' | 'campfire' | 'portal' | 'merchant' | 'quest' | 'background';
   name: string;
   x: number;
   y: number;
@@ -42,143 +42,28 @@ export default function MapExplorer2D({
   isObstacle,
 }: MapExplorer2DProps) {
 
-  // Generate tiles array
-  const tiles: { x: number; y: number }[] = [];
-  for (let y = 0; y < MAP_ROWS; y++) {
-    for (let x = 0; x < MAP_COLS; x++) {
-      tiles.push({ x, y });
-    }
-  }
+  // Fog of War (Explored tiles) is less relevant with pure text navigation, 
+  // but we can still keep track of coordinate exploration if needed, 
+  // though we will just render a text description instead of a map.
 
-  // Get tile color/texture classes depending on Zone ID
-  const getTileStyles = (x: number, y: number) => {
-    const isWall = isObstacle(x, y, activeZone.id);
-    
-    if (activeZone.id === 'qeynos-hills') {
-      if (isWall) return 'bg-emerald-900 border-emerald-950 text-emerald-600 font-mono'; // Trees/mountains
-      // Central pond representation
-      if ((x === 8 && y === 5) || (x === 8 && y === 6) || (x === 9 && y === 5)) {
-        return 'bg-cyan-950 border-cyan-900 animate-pulse'; // Pond
-      }
-      return 'bg-emerald-950/70 border-emerald-900/40 hover:bg-emerald-900/30';
-    } 
-    
-    if (activeZone.id === 'blackburrow') {
-      if (isWall) return 'bg-slate-800 border-slate-950 text-slate-500';
-      return 'bg-indigo-950/60 border-indigo-900/30 hover:bg-indigo-900/20';
-    } 
-    
-    if (activeZone.id === 'lower-guk') {
-      if (isWall) return 'bg-teal-900 border-teal-950 text-emerald-800';
-      return 'bg-zinc-900 border-slate-800/80 hover:bg-zinc-800/40';
-    } 
-    
-    if (activeZone.id === 'east-commonlands') {
-      if (isWall) return 'bg-amber-900 border-amber-950 text-amber-500'; // Canyon ridges
-      return 'bg-yellow-950/40 border-amber-900/20 hover:bg-yellow-900/15'; // Desert sands
-    } 
-    
-    if (activeZone.id === 'castle-mistmoore') {
-      if (isWall) return 'bg-rose-950 border-stone-900 text-rose-800'; // Stone castle pillars
-      return 'bg-slate-900 border-rose-950/30 hover:bg-slate-800/30'; // Velvet rooms
-    } 
-    
-    // Plane of Fear / General
-    if (isWall) return 'bg-fuchsia-950 border-purple-950 text-fuchsia-700';
-    return 'bg-slate-950 border-purple-900/20 hover:bg-purple-950/10';
-  };
+  const entitiesHere = mapEntities.filter(e => e.x === playerX && e.y === playerY);
 
-  const getTileOverlayContent = (x: number, y: number) => {
-    // 1. Check if player occupies tile
-    if (playerX === x && playerY === y) {
-      // Find class color representing class
-      let flagColor = 'bg-amber-500 text-slate-950';
-      if (character.class === 'Wizard' || character.class === 'Enchanter') flagColor = 'bg-cyan-500 text-slate-950';
-      else if (character.class === 'Cleric' || character.class === 'Paladin') flagColor = 'bg-yellow-300 text-slate-900';
-      else if (character.class === 'Necromancer') flagColor = 'bg-purple-500 text-white';
-
-      return (
-        <div className={`relative w-full h-full flex items-center justify-center rounded-sm text-sm font-extrabold shadow-md border ${flagColor} animate-bounce z-10`}>
-          👑
-          <span className="absolute -bottom-6 px-1.5 py-0.5 bg-slate-950/95 text-yellow-400 text-[8px] font-mono whitespace-nowrap border border-amber-500/30 rounded scale-90">
-            {character.name}
-          </span>
-        </div>
-      );
-    }
-
-    // 2. Check if entity occupies tile
-    const entity = mapEntities.find((e) => e.x === x && e.y === y);
-    if (entity) {
-      if (entity.type === 'monster') {
-        return (
-          <div className="w-full h-full flex flex-col items-center justify-center text-sm relative animate-pulse select-none" title={entity.name}>
-            <span className="text-base">{entity.icon || '👿'}</span>
-            <span className="absolute -bottom-5 px-1 py-0.5 bg-red-950/95 text-red-400 text-[8px] font-mono rounded border border-red-500/20 scale-75 whitespace-nowrap">
-              Lvl {entity.level}
-            </span>
-          </div>
-        );
-      }
-      if (entity.type === 'bot') {
-        return (
-          <div className="w-full h-full flex flex-col items-center justify-center text-xs relative select-none" title={`${entity.name} (${entity.class})`}>
-            <span className="text-sm">🧝</span>
-            <span className="absolute -bottom-5 px-1 py-0.5 bg-slate-950/90 text-slate-400 text-[8px] font-mono rounded border border-slate-800 scale-75 whitespace-nowrap">
-              {entity.name}
-            </span>
-          </div>
-        );
-      }
-      if (entity.type === 'chest') {
-        return (
-          <div className="w-full h-full flex items-center justify-center text-base hover:scale-110 transition-transform filter drop-shadow animate-pulse" title={entity.name}>
-            {entity.looted ? '🔓' : '📦'}
-          </div>
-        );
-      }
-      if (entity.type === 'campfire') {
-        return (
-          <div className="w-full h-full flex flex-col items-center justify-center text-base relative" title={entity.name}>
-            <span className="animate-bounce">🔥</span>
-            <span className="absolute -bottom-5 px-1 bg-emerald-950/80 text-emerald-400 text-[7px] font-bold rounded uppercase scale-75 whitespace-nowrap">
-              Rest
-            </span>
-          </div>
-        );
-      }
-      if (entity.type === 'portal') {
-        return (
-          <div className="w-full h-full flex items-center justify-center text-base animate-pulse border-2 border-dashed border-cyan-500/40 rounded-full" title={entity.name}>
-            🚪
-          </div>
-        );
-      }
-    }
-
-    // Otherwise render default zone symbols
-    const isWall = isObstacle(x, y, activeZone.id);
-    if (isWall) {
-      if (activeZone.id === 'qeynos-hills') return '🌲';
-      if (activeZone.id === 'east-commonlands') return '🌵';
-      if (activeZone.id === 'blackburrow') return '🪨';
-      if (activeZone.id === 'lower-guk') return '🧱';
-      if (activeZone.id === 'castle-mistmoore') return '🦇';
-      return '💀';
-    }
-
-    return null;
+  const canMove = (dx: number, dy: number) => {
+    const nx = playerX + dx;
+    const ny = playerY + dy;
+    if (nx < 0 || nx >= MAP_COLS || ny < 0 || ny >= MAP_ROWS) return false;
+    return !isObstacle(nx, ny, activeZone.id);
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-5 space-y-5 shadow-lg relative overflow-hidden">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 space-y-6 shadow-lg relative overflow-hidden">
       
       {/* Decorative top header line */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <h4 className="font-serif text-sm font-bold text-slate-200">
-            {activeZone.name} — Interactive 2D World Map
+          <h4 className="font-serif text-base font-bold text-slate-200">
+            {activeZone.name} — Интерактивное Исследование
           </h4>
         </div>
         <div className="flex items-center gap-1.5 text-[10px] bg-slate-950 font-mono text-slate-400 border border-slate-800 px-2.5 py-1 rounded">
@@ -187,116 +72,141 @@ export default function MapExplorer2D({
         </div>
       </div>
 
-      {/* Grid Container */}
-      <div className="relative flex justify-center bg-slate-1000 p-2.5 rounded-lg border border-slate-950 select-none shadow-inner">
-        <div 
-          className="grid gap-[2px] w-full max-w-lg aspect-[14/11]"
-          style={{ gridTemplateColumns: `repeat(${MAP_COLS}, minmax(0, 1fr))` }}
-        >
-          {tiles.map((tile) => {
-            const styleClass = getTileStyles(tile.x, tile.y);
-            return (
-              <div
-                key={`${tile.x}-${tile.y}`}
-                onClick={() => {
-                  const dx = tile.x - playerX;
-                  const dy = tile.y - playerY;
-                  // Allow clicking adjacent tiles to move!
-                  if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && (dx !== 0 || dy !== 0)) {
-                    onPlayerMove(dx, dy);
-                  }
-                }}
-                className={`aspect-square flex items-center justify-center text-[10px] rounded-[2px] border transition-all duration-150 duration-200 relative cursor-pointer ${styleClass}`}
-              >
-                {getTileOverlayContent(tile.x, tile.y)}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* On-screen controls & Legends combo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-        
-        {/* Legendary Key Map Information */}
-        <div className="bg-slate-950/70 border border-slate-800 p-3.5 rounded-lg space-y-2.5 text-xs font-mono text-slate-400">
-          <span className="text-[10px] text-amber-500 uppercase font-bold tracking-wider block border-b border-slate-800/80 pb-1 mb-1 flex items-center gap-1">
-            <Shield className="h-3 w-3" /> MAP LEGEND GUIDE
-          </span>
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-[11px]">
-            <div className="flex items-center gap-2">
-              <span className="text-sm bg-slate-900 px-1 py-0.5 rounded">👑</span>
-              <span>{character.name} (You)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm bg-slate-900 px-1 py-0.5 rounded">🔥</span>
-              <span>Campfire (Heal)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm bg-slate-900 px-1 py-0.5 rounded">📦</span>
-              <span>Treasure Chest</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm bg-slate-900 px-1 py-0.5 rounded">🚪</span>
-              <span>Connected Portals</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm bg-slate-900 px-1 py-0.5 rounded">👿</span>
-              <span>Aggressive Foes</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm bg-slate-900 px-1 py-0.5 rounded">🧝</span>
-              <span>MMO Bot Guildies</span>
-            </div>
-          </div>
-          <div className="text-[10px] text-slate-500 border-t border-slate-800/60 pt-2 flex items-start gap-1">
-            <HelpCircle className="h-3 w-3 text-slate-500 mt-0.5 shrink-0" />
-            <span>Use WASD, Arrow keys, or click/tap adjacent grids to travel and engage monsters!</span>
+      <div className="bg-slate-950 p-6 rounded-lg border border-slate-800/80 shadow-inner">
+        {/* Environment Text Description */}
+        <div className="text-center space-y-2 mb-8">
+          <h2 className="font-serif text-2xl text-amber-500 uppercase tracking-widest font-black">
+            {activeZone.name}
+          </h2>
+          <p className="text-slate-400 font-mono text-sm leading-relaxed max-w-lg mx-auto">
+            Вы находитесь в точке <span className="text-amber-400">[{playerX}, {playerY}]</span>. 
+            Осмотритесь вокруг, чтобы решить, куда двигаться дальше.
+          </p>
+          <div className="flex items-center justify-center gap-3 text-[10px] font-mono text-slate-500 pt-3">
+            <span className="bg-slate-900 border border-slate-700 px-2 py-1 rounded shadow-sm opacity-80" title="Распределяют задания и задают экономику" >
+              Квестодатели и Торговцы: <span className="text-cyan-400 font-bold">{Math.floor(mapEntities.filter(e => e.type === 'merchant' || e.type === 'quest').length * 15 + 50)}</span>
+            </span>
+            <span className="bg-slate-900 border border-slate-700 px-2 py-1 rounded shadow-sm opacity-80" title="Живой мир">
+              Фоновые NPC: <span className="text-amber-400 font-bold">{Math.floor(mapEntities.filter(e => e.type === 'background').length * 40 + 100)}</span>
+            </span>
+            <span className="bg-slate-900 border border-slate-700 px-2 py-1 rounded shadow-sm opacity-80" title="Опасная зона">
+              Мобы в локации: <span className="text-red-400 font-bold">{mapEntities.filter(e => e.type === 'monster').length * 50 + 1000}</span>
+            </span>
           </div>
         </div>
 
-        {/* Visual Metallic Retro D-pad Controller */}
-        <div className="flex flex-col items-center justify-center p-2">
-          <div className="relative w-28 h-28 bg-gradient-to-br from-slate-800 to-slate-950 border-4 border-slate-700 rounded-full shadow-lg flex items-center justify-center">
-            {/* Center Core Button */}
-            <div className="absolute w-8 h-8 bg-slate-950 border-2 border-slate-700 rounded-full shadow-inner z-10 flex items-center justify-center text-[10px] font-black text-amber-500 select-none">
-              PAD
+        {/* Entities Here */}
+        <div className="bg-slate-900/50 p-4 border border-slate-800 rounded-lg mb-8 min-h-[100px] flex items-center justify-center">
+          {entitiesHere.length > 0 ? (
+            <div className="space-y-3 w-full">
+              <h3 className="text-[10px] uppercase font-bold text-slate-500 font-mono border-b border-slate-800 pb-1 mb-2">
+                Прямо перед вами:
+              </h3>
+              {entitiesHere.map(e => (
+                <div key={e.id} className="flex items-center justify-between bg-slate-950 p-3 rounded border border-slate-700 hover:border-amber-500/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl drop-shadow-md">
+                      {e.type === 'monster' ? (e.icon || '👿') : 
+                       e.type === 'chest' ? (e.looted ? '🔓' : '📦') : 
+                       e.type === 'bot' ? '🧝' : 
+                       e.type === 'merchant' ? '💰' :
+                       e.type === 'quest' ? '📜' :
+                       e.type === 'background' ? '👤' :
+                       e.type === 'portal' ? '🚪' : '🔥'}
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-slate-200 text-sm flex items-center gap-2">
+                        {e.name}
+                        {(e.type === 'bot' || e.type === 'merchant' || e.type === 'quest' || e.type === 'background') && (
+                          <span className="text-[8px] bg-slate-800 text-slate-400 px-1 py-0.5 rounded font-mono border border-slate-700">NPC</span>
+                        )}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        {e.type === 'monster' && `Агрессивный монстр (Ур. ${e.level})`}
+                        {e.type === 'chest' && (e.looted ? 'Пустой сундук' : 'Сундук с сокровищами')}
+                        {e.type === 'bot' && `Искатель приключений (${e.class})`}
+                        {e.type === 'merchant' && `Местный Торговец`}
+                        {e.type === 'quest' && `Квестодатель`}
+                        {e.type === 'background' && `Фоновый Житель`}
+                        {e.type === 'portal' && 'Древние врата (Портал)'}
+                        {e.type === 'campfire' && 'Место для безопасного отдыха'}
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      // Trigger interaction by moving "into" the same tile again
+                      onPlayerMove(0, 0); 
+                    }}
+                    className="bg-amber-600 hover:bg-amber-500 text-slate-950 px-4 py-2 font-bold text-xs uppercase tracking-wider rounded shadow cursor-pointer transition-transform active:scale-95"
+                  >
+                    Взаимодействовать
+                  </button>
+                </div>
+              ))}
             </div>
-            
-            {/* Move Up */}
+          ) : (
+            <p className="text-sm text-slate-500 italic font-serif">Здесь ничего нет. Тихий ветер гуляет по этой местности...</p>
+          )}
+        </div>
+
+        {/* Text Navigation Choices */}
+        <div>
+          <h3 className="text-[11px] uppercase font-bold text-slate-500 font-mono border-b border-slate-800 pb-2 mb-4 text-center tracking-widest">
+            Куда отправиться дальше? (Текстовый Выбор)
+          </h3>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
+            {/* North */}
             <button
               onClick={() => onPlayerMove(0, -1)}
-              className="absolute top-1 w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:bg-amber-600 active:text-slate-950 text-slate-200 border border-slate-700 rounded shadow-md cursor-pointer transition-all duration-100 font-bold"
-              title="Move Up"
+              disabled={!canMove(0, -1)}
+              className="relative group bg-slate-900 border border-slate-700 hover:border-amber-500/80 hover:bg-slate-800 disabled:opacity-40 disabled:hover:border-slate-700 disabled:cursor-not-allowed p-4 rounded-lg flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
-              ▲
+              <div className="flex items-center gap-3">
+                <span className="text-slate-500 group-hover:text-amber-500 font-black text-lg">▲</span>
+                <span className="font-bold text-slate-200 group-hover:text-amber-400">Идти на Север</span>
+              </div>
+              <span className="text-xs text-slate-500 font-mono">y - 1</span>
             </button>
 
-            {/* Move Down */}
+            {/* South */}
             <button
               onClick={() => onPlayerMove(0, 1)}
-              className="absolute bottom-1 w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:bg-amber-600 active:text-slate-950 text-slate-200 border border-slate-700 rounded shadow-md cursor-pointer transition-all duration-100 font-bold"
-              title="Move Down"
+              disabled={!canMove(0, 1)}
+              className="relative group bg-slate-900 border border-slate-700 hover:border-amber-500/80 hover:bg-slate-800 disabled:opacity-40 disabled:hover:border-slate-700 disabled:cursor-not-allowed p-4 rounded-lg flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
-              ▼
+              <div className="flex items-center gap-3">
+                <span className="text-slate-500 group-hover:text-amber-500 font-black text-lg">▼</span>
+                <span className="font-bold text-slate-200 group-hover:text-amber-400">Идти на Юг</span>
+              </div>
+              <span className="text-xs text-slate-500 font-mono">y + 1</span>
             </button>
 
-            {/* Move Left */}
+            {/* West */}
             <button
               onClick={() => onPlayerMove(-1, 0)}
-              className="absolute left-1 w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:bg-amber-600 active:text-slate-950 text-slate-200 border border-slate-700 rounded shadow-md cursor-pointer transition-all duration-100 font-bold"
-              title="Move Left"
+              disabled={!canMove(-1, 0)}
+              className="relative group bg-slate-900 border border-slate-700 hover:border-amber-500/80 hover:bg-slate-800 disabled:opacity-40 disabled:hover:border-slate-700 disabled:cursor-not-allowed p-4 rounded-lg flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
-              ◀
+              <div className="flex items-center gap-3">
+                <span className="text-slate-500 group-hover:text-amber-500 font-black text-lg">◀</span>
+                <span className="font-bold text-slate-200 group-hover:text-amber-400">Идти на Запад</span>
+              </div>
+              <span className="text-xs text-slate-500 font-mono">x - 1</span>
             </button>
 
-            {/* Move Right */}
+            {/* East */}
             <button
               onClick={() => onPlayerMove(1, 0)}
-              className="absolute right-1 w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:bg-amber-600 active:text-slate-950 text-slate-200 border border-slate-700 rounded shadow-md cursor-pointer transition-all duration-100 font-bold"
-              title="Move Right"
+              disabled={!canMove(1, 0)}
+              className="relative group bg-slate-900 border border-slate-700 hover:border-amber-500/80 hover:bg-slate-800 disabled:opacity-40 disabled:hover:border-slate-700 disabled:cursor-not-allowed p-4 rounded-lg flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
-              ▶
+              <div className="flex items-center gap-3">
+                <span className="text-slate-500 group-hover:text-amber-500 font-black text-lg">▶</span>
+                <span className="font-bold text-slate-200 group-hover:text-amber-400">Идти на Восток</span>
+              </div>
+              <span className="text-xs text-slate-500 font-mono">x + 1</span>
             </button>
           </div>
         </div>

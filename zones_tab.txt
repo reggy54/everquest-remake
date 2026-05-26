@@ -1,0 +1,201 @@
+3093:            selectedTab === 'zones' && (
+3094-              <div className="bg-slate-900 border border-slate-800 rounded-lg shadow-sm space-y-6 relative overflow-hidden">
+3095-                {/* Active Zone Visual Header */}
+3096-                <div className="relative h-64 w-full flex items-end p-6 border-b border-amber-900/40">
+3097-                  <div 
+3098-                    className="absolute inset-0 bg-cover bg-center transition-all duration-1000"
+3099-                    style={{ backgroundImage: `url('${activeZone.imageUrl || 'https://images.unsplash.com/photo-1542224566-6e85f2e6772f?q=80&w=1920&auto=format&fit=crop'}')` }}
+3100-                  ></div>
+3101-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent"></div>
+3102-                  <div className="absolute inset-0 bg-slate-900/20"></div>
+3103-                  
+3104-                  <div className="relative z-10 w-full max-w-2xl">
+3105-                     <div className={`text-[10px] font-extrabold uppercase mb-2 inline-block px-2 py-1 rounded backdrop-blur-md shadow-lg ${
+3106-                        activeZone.difficulty === 'Safe' ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50'
+3107-                        : activeZone.difficulty === 'Easy' ? 'bg-blue-950/80 text-blue-400 border border-blue-800/50'
+3108-                        : activeZone.difficulty === 'Medium' ? 'bg-yellow-950/80 text-yellow-400 border border-yellow-800/50'
+3109-                        : 'bg-red-950/80 text-red-400 border border-red-800/50'
+3110-                     }`}>
+3111-                        Угроза: {activeZone.difficulty}
+3112-                     </div>
+3113-                     <h2 className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg tracking-tight mb-2">
+3114-                        {activeZone.name}
+3115-                     </h2>
+3116-                     <p className="text-sm font-mono text-slate-300 drop-shadow-md leading-relaxed hidden sm:block">
+3117-                        {activeZone.description}
+3118-                     </p>
+3119-                  </div>
+3120-                </div>
+3121-
+3122-                <div className="p-5 space-y-6 relative z-10 bg-slate-900/90 backdrop-blur-sm -mt-6">
+3123-                  {/* Zone Select Grid */}
+3124-                  <div>
+3125-                    <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between border-b border-slate-800 pb-2">
+3126-                      <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-amber-500" /> Исследовать другие регионы</span>
+3127-                      <span className="text-[10px] text-emerald-500 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-900/50">Бесшовный Переход</span>
+3128-                    </label>
+3129-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+3130-                      {GAME_ZONES.map((zone) => (
+3131-                        <button
+3132-                          key={zone.id}
+3133-                          onClick={() => {
+3134-                            setActiveZone(zone);
+3135-                            setLoreTopic(zone.name);
+3136-                          }}
+3137-                          className={`text-slate-100 h-24 p-0 rounded-lg font-mono border text-left transition-all relative overflow-hidden group cursor-pointer ${
+3138-                            activeZone.id === zone.id
+3139-                              ? 'border-amber-500 ring-2 ring-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.4)]'
+3140-                              : 'border-slate-700 hover:border-amber-500/50 hover:shadow-lg'
+3141-                          }`}
+3142-                        >
+3143-                          <div 
+3144-                             className="absolute inset-0 bg-cover bg-center group-hover:scale-110 transition-transform duration-700"
+3145-                             style={{ backgroundImage: `url('${zone.imageUrl || ''}')` }}
+3146-                          />
+3147-                          <div className={`absolute inset-0 ${activeZone.id === zone.id ? 'bg-slate-900/60' : 'bg-slate-900/80 group-hover:bg-slate-900/60'} transition-colors duration-300`} />
+3148-                          
+3149-                          <div className="absolute inset-0 p-3 flex flex-col justify-end">
+3150-                             <div className="font-bold text-xs truncate text-white drop-shadow-md">{zone.name}</div>
+3151-                             <div className="text-[9px] font-medium text-amber-400 mt-0.5 uppercase drop-shadow">Lvl {zone.minLevel}+</div>
+3152-                          </div>
+3153-                        </button>
+3154-                      ))}
+3155-                    </div>
+3156-                  </div>
+3157-
+3158-                  {/* 2D Map Explorer Grid */}
+3159-                <MapExplorer2D
+3160-                  activeZone={activeZone}
+3161-                  character={character}
+3162-                  playerX={playerX}
+3163-                  playerY={playerY}
+3164-                  mapEntities={mapEntities}
+3165-                  onPlayerMove={handlePlayerMove}
+3166-                  MAP_COLS={MAP_COLS}
+3167-                  MAP_ROWS={MAP_ROWS}
+3168-                  isObstacle={isObstacle}
+3169-                />
+3170-
+3171-                {/* Fast Travel & Transport Hub */}
+3172-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 shadow-sm mt-6">
+3173-                  <div className="flex items-center gap-2 border-b border-slate-800 pb-2.5 mb-4">
+3174-                    <Compass className="h-5 w-5 text-emerald-400" />
+3175-                    <h3 className="font-serif text-lg font-bold text-white uppercase tracking-wider">
+3176-                      Врата & Транспорт
+3177-                    </h3>
+3178-                  </div>
+3179-
+3180-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+3181-                    {/* Public portals / Waystones */}
+3182-                    <div className="space-y-3">
+3183-                      <p className="text-[10px] uppercase font-bold text-slate-500 font-mono">Мировые Врата (Телепортация):</p>
+3184-                      <div className="space-y-2">
+3185-                        {GAME_ZONES.filter(z => z.id !== activeZone.id).map(z => (
+3186-                          <div key={z.id} className="bg-slate-950 p-2.5 rounded border border-slate-850 flex items-center justify-between">
+3187-                            <div>
+3188-                              <div className="text-xs font-bold text-cyan-400 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> Врата в {z.name}</div>
+3189-                              <div className="text-[9px] text-slate-500 mt-0.5">Уровень: {z.minLevel}+</div>
+3190-                            </div>
+3191-                            <button
+3192-                              disabled={character.gold < 5}
+3193-                              onClick={() => {
+3194-                                const updatedChar = { ...character, gold: character.gold - 5 };
+3195-                                saveCharacter(updatedChar);
+3196-                                setActiveZone(z);
+3197-                                setLoreTopic(z.name);
+3198-                                triggerAlert(`Вы телепортировались в ${z.name}! Списано 5 золота.`, 'success');
+3199-                              }}
+3200-                              className="px-3 py-1.5 bg-cyan-950 hover:bg-cyan-900 text-cyan-400 border border-cyan-800/50 rounded text-xs uppercase tracking-wider font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+3201-                            >
+3202-                              5g
+3203-                            </button>
+3204-                          </div>
+3205-                        ))}
+3206-                      </div>
+3207-                    </div>
+3208-
+3209-                    {/* Mounts */}
+3210-                    <div className="space-y-3">
+3211-                      <p className="text-[10px] uppercase font-bold text-slate-500 font-mono">Ездовые Животные (Маунты):</p>
+3212-                      <div className="bg-slate-950 p-4 border border-slate-800 rounded text-center relative overflow-hidden">
+3213-                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
+3214-                        <div className="text-3xl mb-2">🐎</div>
+3215-                        <h4 className="font-bold text-sm text-amber-500 mb-1">Гнедой Скакун</h4>
+3216-                        <p className="text-xs text-slate-400 font-mono pb-3">+40% к скорости перемещения по глобальной карте</p>
+3217-                        
+3218-                        <div className="flex justify-center">
+3219-                          <button 
+3220-                            className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 px-4 py-2 text-xs uppercase tracking-wider font-bold rounded transiton-colors cursor-pointer"
+3221-                            onClick={() => triggerAlert('Вы оседлали скакуна. Скорость перемещения увеличена!', 'info')}
+3222-                          >
+3223-                            Оседлать (Скоро!)
+3224-                          </button>
+3225-                        </div>
+3226-                      </div>
+3227-                    </div>
+3228-                  </div>
+3229-                </div>
+3230-
+3231-                {/* Selected Zone Description Profile */}
+3232-                <div className="bg-slate-952 p-4 rounded-lg border border-slate-800/80 space-y-2 mt-6">
+3233-                  <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+3234-                    <span className="font-serif text-base text-white">Хроники локации: {activeZone.name}</span>
+3235-                    <button
+3236-                      onClick={() => {
+3237-                        setSelectedTab('lore');
+3238-                        setLoreSearch(activeZone.name);
+3239-                        // Trigger lookup directly
+3240-                        const triggerDirectLore = async () => {
+3241-                          setLoreLoading(true);
+3242-                          try {
+3243-                            const response = await fetch('/api/gemini/lore', {
+3244-                              method: 'POST',
+3245-                              headers: { 'Content-Type': 'application/json' },
+3246-                              body: JSON.stringify({ topic: activeZone.name }),
+3247-                            });
+3248-                            if (response.ok) {
+3249-                              const data = await response.json();
+3250-                              setLoreResponse(data);
+3251-                            }
+3252-                          } catch (e) {
+3253-                            console.error(e);
+3254-                          } finally {
+3255-                            setLoreLoading(false);
+3256-                          }
+3257-                        };
+3258-                        triggerDirectLore();
+3259-                      }}
+3260-                      className="text-[10px] text-amber-500 font-mono hover:underline cursor-pointer flex items-center gap-1"
+3261-                    >
+3262-                      <BookOpen className="h-3 w-3" />
+3263-                      Прочесть летопись
+3264-                    </button>
+3265-                  </div>
+3266-                  <p className="text-xs text-slate-400 leading-relaxed font-serif">{activeZone.description}</p>
+3267-                </div>
+3268-
+3269-                {/* Available Monsters Section (The Grind loop) */}
+3270-                <div className="space-y-3">
+3271-                  <div className="flex justify-between items-center">
+3272-                    <span className="block text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+3273-                      Существа в этой локации:
+3274-                    </span>
+3275-                    <button 
+3276-                      onClick={handleRequestQuest}
+3277-                      disabled={questLoading}
+3278-                      className="text-[10px] bg-slate-800 hover:bg-slate-700 text-amber-500 border border-slate-700 px-3 py-1 rounded cursor-pointer disabled:opacity-40 transition-all flex items-center gap-1 font-mono font-bold"
+3279-                    >
+3280-                      {questLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+3281-                      📜 Начать побочное задание
+3282-                    </button>
+3283-                  </div>
+3284-                  
+3285-                  <div className="space-y-2">
+3286-                    {activeZone.monsters.map((monster, i) => (
+3287-                      <div 
+3288-                        key={i} 
+3289-                        className="bg-slate-950 border border-slate-800 p-3.5 rounded-lg flex items-center justify-between gap-4 transition-all hover:border-slate-700"
+3290-                      >
+3291-                        <div>
+3292-                          <div className="flex items-center gap-2">
+3293-                            <span className="font-sans font-bold text-sm text-slate-200">{monster.name}</span>
