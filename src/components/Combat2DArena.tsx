@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PlayerCharacter, Zone } from '../types';
+import { COMPANIONS_DB } from './CompanionsCamp';
 
 interface Combat2DArenaProps {
   character: PlayerCharacter;
@@ -424,11 +425,10 @@ export default function Combat2DArena({
 
           // Companion Emoji symbol depending on class
           let cEmoji = '🛡️';
-          if (member.class === 'Cleric') cEmoji = '✝️';
-          else if (member.class === 'Wizard') cEmoji = '🔮';
-          else if (member.class === 'Enchanter') cEmoji = '🪄';
-          else if (member.class === 'Bard') cEmoji = '🎵';
-          else if (member.class === 'Monk') cEmoji = '👊';
+          if (member.class === 'Priest') cEmoji = '✝️';
+          else if (member.class === 'Mage') cEmoji = '🔮';
+          else if (member.class === 'Summoner') cEmoji = '🔯';
+          else if (member.class === 'Shaman') cEmoji = '🌿';
 
           ctx.font = '16px Arial';
           ctx.textAlign = 'center';
@@ -484,14 +484,12 @@ export default function Combat2DArena({
 
       // Class symbol emoji
       let pEmoji = '🛡️';
-      if (character.class === 'Wizard' || character.class === 'Magician') pEmoji = '🧙‍♂️';
-      else if (character.class === 'Cleric') pEmoji = '⛪';
+      if (character.class === 'Mage') pEmoji = '🧙‍♂️';
+      else if (character.class === 'Priest') pEmoji = '⛪';
       else if (character.class === 'Paladin') pEmoji = '🌟';
       else if (character.class === 'Ranger') pEmoji = '🏹';
-      else if (character.class === 'Druid') pEmoji = '🌿';
-      else if (character.class === 'Monk') cEmoji: pEmoji = '👊';
-      else if (character.class === 'Bard') pEmoji = '🎻';
-      else if (character.class === 'Necromancer') pEmoji = '💀';
+      else if (character.class === 'Shaman') pEmoji = '🌿';
+      else if (character.class === 'Summoner') pEmoji = '🔯';
       else if (character.class === 'Rogue') pEmoji = '🥷';
 
       ctx.font = '22px Arial';

@@ -1,32 +1,22 @@
 export type CharacterClass =
   | 'Warrior'
-  | 'Cleric'
-  | 'Paladin'
-  | 'Shadow Knight'
+  | 'Mage'
   | 'Ranger'
-  | 'Druid'
-  | 'Monk'
-  | 'Bard'
+  | 'Priest'
   | 'Rogue'
-  | 'Shaman'
-  | 'Necromancer'
-  | 'Wizard'
-  | 'Magician'
-  | 'Enchanter';
+  | 'Summoner'
+  | 'Paladin'
+  | 'Shaman';
 
 export type CharacterRace =
   | 'Human'
-  | 'Barbarian'
-  | 'Erudite'
-  | 'Wood Elf'
   | 'High Elf'
-  | 'Dark Elf'
+  | 'Orc'
   | 'Dwarf'
-  | 'Halfling'
-  | 'Gnome'
-  | 'Ogre'
-  | 'Troll'
-  | 'Iksar';
+  | 'Dragonborn'
+  | 'Moon Spirit'
+  | 'Dark Elf'
+  | 'Mechanical Construct';
 
 export interface CombatStats {
   str: number;
@@ -40,23 +30,47 @@ export interface CombatStats {
 
 export type SlotType =
   | 'head'
+  | 'shoulders'
   | 'chest'
-  | 'arms'
-  | 'legs'
   | 'hands'
+  | 'waist'
+  | 'legs'
   | 'feet'
+  | 'cloak'
+  | 'amulet'
+  | 'ring1'
+  | 'ring2'
   | 'primary'
-  | 'secondary';
+  | 'secondary'
+  | 'fateFocus';
+
+export type RuneColor = 'red' | 'blue' | 'green' | 'purple' | 'gold';
+
+export interface Rune {
+  id: string;
+  name: string;
+  color: RuneColor;
+  level: number;
+  effect: string;
+}
+
+export interface ItemSocket {
+  id: string;
+  rune: Rune | null;
+}
 
 export interface Item {
   id: string;
   name: string;
-  slot: SlotType | 'none'; // 'none' means inventory only
+  slot: SlotType | 'none' | 'consumable' | 'material' | 'rune'; // added rune
   description: string;
   price: number;
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic';
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic' | 'eternium';
   stats: Partial<CombatStats> & { hp?: number; mana?: number; ac?: number };
   allowedClasses?: CharacterClass[];
+  modifiers?: string[]; // E.g. '+12% Критического урона', 'Эхо Разлома'
+  upgradeLevel?: number; // Up to +30
+  sockets?: ItemSocket[];
 }
 
 export interface Spell {
@@ -83,6 +97,17 @@ export interface Quest {
   progressRequired: number;
 }
 
+export type FateType = 'Light' | 'Dark' | 'Balance' | 'Chaos' | 'Legendary';
+
+export interface FateShard {
+  id: string;
+  name: string;
+  type: FateType;
+  description: string;
+  stats?: Partial<CombatStats>;
+  buff?: string;
+}
+
 export interface PlayerCharacter {
   name: string;
   race: CharacterRace;
@@ -103,10 +128,18 @@ export interface PlayerCharacter {
   msqProgress?: { chapter: number; stage: number; completed: boolean };
   unlockedSpells: Spell[];
   visualCustomization?: VisualCustomization;
+  // Progression
+  talentPoints?: number;
+  talents?: string[]; // Arrays of unlocked talent node IDs
+  fateShardsInventory?: FateShard[]; 
+  fatePages?: Record<number, FateShard | null>; // Page number -> inserted shard
+  // External modules
   pets?: Pet[];
   houseFurniture?: FurnitureItem[];
   craftingStats?: CraftingStats;
   arenaStats?: ArenaStats;
+  companions?: Record<string, CompanionState>; // companionId -> state
+  activeCompanion?: string | null; // companionId
 }
 
 export interface VisualCustomization {
@@ -115,6 +148,39 @@ export interface VisualCustomization {
   skinType: string;
   transmogs: Record<SlotType, string | null>;
   title: string;
+  hideHelmet?: boolean;
+  aura?: string | null;
+  trail?: string | null;
+}
+
+export interface CompanionDef {
+  id: string;
+  name: string;
+  race: string;
+  charClass: string;
+  personality: string;
+  role: string;
+  description: string;
+  icon: string;
+  romanceable: boolean;
+}
+
+export interface CompanionState {
+  id: string;
+  loyalty: number;
+  unlocked: boolean;
+}
+
+export interface TransmogPreset {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  author: string;
+  transmogs: Record<SlotType, string | null>;
+  hideHelmet?: boolean;
+  aura?: string | null;
+  trail?: string | null;
 }
 
 export interface Pet {
@@ -152,10 +218,17 @@ export interface CraftingStats {
 }
 
 export interface ArenaStats {
-  rating: number;
+  rating: number; // Public rank points
+  hiddenMmr?: number; // Personal hidden MMR
+  roleMmr?: { dps: number; tank: number; support: number; hybrid: number };
+  behaviorScore?: number; // 0 to 100
+  compliments?: number;
+  reports?: number;
   wins: number;
   losses: number;
   points: number;
+  rank?: string;
+  seasonMatches?: number;
 }
 
 export interface SimulatedPlayer {
@@ -187,6 +260,8 @@ export interface Zone {
   monsters: { name: string; level: number; hp: number; isBoss?: boolean }[];
   connections: string[]; // connecting zone IDs
   imageUrl?: string;
+  events?: { name: string; type: 'cyclic' | 'dynamic' | 'world'; frequency: string; reward: string; description: string }[];
+  pointsOfInterest?: string[];
 }
 
 export interface CombatEntity {

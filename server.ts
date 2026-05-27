@@ -326,8 +326,8 @@ Format return JSON:
           });
         }
       }
-    } catch (err) {
-      console.error('Failure inside Gemini automatic chat retort:', err);
+    } catch (err: any) {
+      console.warn('Failure inside Gemini automatic chat retort:', err?.message || 'Rate limit');
     }
   } else if (!ai && (channel === 'OOC' || channel === 'Shout' || channel === 'Guild')) {
     // Basic mock replies if Gemini API is not working or not configured
@@ -351,8 +351,117 @@ Format return JSON:
   res.json({ success: true, message: userMsg, currentMessages: globalMessages });
 });
 
+// AI Director World Events
+app.post('/api/gemini/world-event', async (req, res) => {
+  if (!ai) {
+    return res.json({
+      title: 'Нашествие гоблинов',
+      description: 'Небольшая группа гоблинов была замечена на границах.',
+      impact: 'Минорное увеличение спауна гоблинов.'
+    });
+  }
+
+  try {
+    const prompt = `You are the AI Director for a classic MMORPG. Generate a random and engaging dynamic world event.
+The event should affect the current state of the server.
+
+Format return JSON:
+{
+  "title": "Short event title",
+  "description": "Flavor description of the event spreading across the world",
+  "impact": "Mechanical impact, e.g. 2x gold drops or harder monsters"
+}`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            impact: { type: Type.STRING },
+          },
+          required: ['title', 'description', 'impact'],
+        },
+      },
+    });
+
+    const parsed = JSON.parse(response.text || '{}');
+    
+    serverSettings.activeEvent = parsed.title;
+    serverSettings.announcement = parsed.description;
+    
+    addChatMessage({
+      sender: 'АИ РЕЖИССЁР (Мировое Событие)',
+      channel: 'System',
+      text: `🌍 СОБЫТИЕ: ${parsed.title}. ${parsed.description} Последствия: ${parsed.impact}`,
+    });
+
+    res.json(parsed);
+  } catch (err: any) {
+    console.warn('Error generating world event:', err?.message || 'Rate limit');
+    const fallback = {
+      title: 'Внезапное затишье',
+      description: 'Магические потоки мира стабилизировались. Временно ничего не происходит.',
+      impact: 'Отдых перед бурей.'
+    };
+    serverSettings.activeEvent = fallback.title;
+    serverSettings.announcement = fallback.description;
+    
+    addChatMessage({
+      sender: 'АИ РЕЖИССЁР (Мировое Событие)',
+      channel: 'System',
+      text: `🌍 СОБЫТИЕ: ${fallback.title}. ${fallback.description} Последствия: ${fallback.impact}`,
+    });
+
+    res.json(fallback);
+  }
+});
+
+// AI Director Player-Driven World Event
+app.post('/api/gemini/player-impact', async (req, res) => {
+  const { playerName, actionType, details } = req.body;
+  if (!ai) {
+    return res.json({ message: 'Слухи о твоих деяниях быстро рассеялись.' });
+  }
+
+  try {
+    const prompt = `Ты — AI-режиссёр классической MMORPG "Этерния".
+Игрок по имени "${playerName}" только что совершил значимое действие в мире: 
+Действие: ${actionType}
+Детали: ${details}
+
+Сгенерируй короткий (1-2 предложения) "слух", который NPC-жители мира пускают об этом игроке в таверне или крик городского глашатая на площади, реагирующий на это действие. Это позволит игроку почувствовать, что мир живой и реагирует на его действия.
+Пиши от лица обитателей мира (например: "Говорят, что...", "Слыхали? Тот самый...", "Внимание всем!").
+Пиши на русском языке, максимум 150 символов.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: prompt
+    });
+
+    const reactionText = response.text || 'В мире произошли новые изменения, но никто не заметил.';
+    
+    // Add to global chat
+    addChatMessage({
+      sender: 'Слухи из Таверны',
+      channel: 'System',
+      text: `🌍 ВЛИЯНИЕ НА МИР: ${reactionText.trim()}`,
+    });
+
+    res.json({ success: true, text: reactionText });
+  } catch (err: any) {
+    console.warn('Error in player-impact:', err?.message || 'Rate limit');
+    res.json({ message: 'Местные жители слишком заняты своими проблемами.' });
+  }
+});
+
 // Periodic simulated chatter injector to make the world feel "alive"
-setInterval(() => {
+setInterval(async () => {
+
   const botsLog = [
     { sender: 'Athelas_Elf', channel: 'OOC', text: 'Where does the Holly Wind quest trigger again?' },
     { sender: 'Grom_Bronzebeard', channel: 'Shout', text: 'TRAIN IN BLACKBURROW RUN FOR THE ZONE LINE!!!' },
@@ -363,7 +472,14 @@ setInterval(() => {
   ];
   const selected = botsLog[Math.floor(Math.random() * botsLog.length)];
   addChatMessage(selected as any);
+  
+  if(ai && Math.random() < 0.05) {
+     try {
+       await fetch('http://localhost:3000/api/gemini/world-event', { method: 'POST' });
+     } catch(e) {}
+  }
 }, 25000); // add one every 25 seconds of idle, keeping it active without spam
+
 
 // Gemini Endpoint: Custom Dynamic Side Quests
 app.post('/api/gemini/quest', async (req, res) => {
@@ -464,9 +580,100 @@ Provide JSON output only.`;
 
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
-  } catch (err) {
-    console.error('Error generating quest:', err);
-    res.status(500).json({ error: 'Failed to generate quest.' });
+  } catch (err: any) {
+    console.warn('Error generating quest:', err?.message || 'Rate limit');
+    res.json({
+        title: "Сбой связи с Режиссером",
+        description: "Древние силы прервали сигнал. Ваша задача - просто выжить в эту эпоху.",
+        objective: "Выполняйте любые действия на свой вкус",
+        rewardExp: 50,
+        rewardGold: 10
+    });
+  }
+});
+
+// Gemini Endpoint: Generate array of dynamic personal quests
+app.post('/api/gemini/dynamic-quests', async (req, res) => {
+  const { name, charClass, race, level, zone, recentActions } = req.body;
+
+  if (!ai) {
+    return res.json({
+      quests: [
+        {
+          title: "Пробел в экономике",
+          giver: "ИИ-Режиссёр (Анализ рынка)",
+          description: "На локальном рынке резко выросла цена на ресурсы из-за вашего активного крафта. Местным ремесленникам нужна помощь в восстановлении запасов.",
+          objective: "Добыть 10 базовых материалов",
+          rewardExp: 300,
+          rewardGold: 150
+        }
+      ]
+    });
+  }
+
+  try {
+    const prompt = `Generate a set of 2 lore-rich dynamic personalized quests for an MMORPG.
+Player details: Level ${level} ${race} ${charClass} named ${name}. Location: ${zone}.
+Recent activities or context: ${recentActions || "Exploring the world, grinding monsters, and gathering some resources."}
+
+Story Context: This is an ongoing saga. If level is < 25, it's Chapter 1: The Awakening. Else it's a later chapter. Base the quest giver or lore on their current chapter. If they have a companion active, make one of the quests relevant to that active companion.
+
+Based on this context, the AI Director noticed an imbalance or opportunity. Generate 2 quests reacting to the player's recent actions or status (e.g. over-hunting a monster type causes another to thrive, or gathered resources caused a crash in market).
+Output JSON containing an array "quests", where each has:
+1. title (Max 6 words)
+2. giver (e.g. "AI Director (World Event)", or the companion's name, or a key NPC)
+3. description (A paragraph detailing the story significance, companion conflict, or what happened because of the player's recent actions and what they must do now).
+4. objective (e.g. "Gather 10 Iron Ore", "Defeat 5 Mutated Slimes")
+5. rewardExp (integer between 50*level and 200*level)
+6. rewardGold (integer between 10*level and 50*level)
+
+Keep it immersive, translating game mechanics into story consequences. Language: Russian.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            quests: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING },
+                  giver: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  objective: { type: Type.STRING },
+                  rewardExp: { type: Type.INTEGER },
+                  rewardGold: { type: Type.INTEGER }
+                },
+                required: ['title', 'giver', 'description', 'objective', 'rewardExp', 'rewardGold']
+              }
+            }
+          },
+          required: ['quests']
+        }
+      }
+    });
+
+    const parsed = JSON.parse(response.text || '{}');
+    res.json(parsed);
+  } catch (err: any) {
+    console.warn('Error generating dynamic quests:', err?.message || 'Rate limit');
+    res.json({
+      quests: [
+        {
+          title: "Сбой связи с Режиссером",
+          giver: "Система",
+          description: "Древние силы прервали сигнал. Ваша задача - просто выжить.",
+          objective: "Просто выживайте",
+          rewardExp: 50,
+          rewardGold: 10
+        }
+      ]
+    });
   }
 });
 
@@ -514,9 +721,12 @@ Format standard output JSON:
 
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
-  } catch (err) {
-    console.error('Error gathering lore:', err);
-    res.status(500).json({ error: 'Failed to access the Tome of Norrath.' });
+  } catch (err: any) {
+    console.warn('Error gathering lore:', err?.message || 'Rate limit');
+    res.json({
+      title: 'Ошибка Архива',
+      text: 'В данный момент не удалось получить доступ к древним хроникам Норрата. Магические помехи.'
+    });
   }
 });
 
@@ -560,9 +770,11 @@ Keep it under 100 words. Return JSON:
 
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
-  } catch (err) {
-    console.error('Error making DM combat summary:', err);
-    res.status(500).json({ error: 'Failed to formulate combat log.' });
+  } catch (err: any) {
+    console.warn('Error making DM combat summary:', err?.message || 'Rate limit');
+    res.json({
+      description: `Стремительный обмен ударами в гуще боя! Пыль столбом. Вы продолжаете сражаться с врагом!`,
+    });
   }
 });
 

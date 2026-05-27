@@ -1,141 +1,205 @@
 import { CharacterClass, CharacterRace, CombatStats, Zone, Item, Spell } from '../types';
 
 export const CLASS_DESCRIPTIONS: Record<CharacterClass, string> = {
-  Warrior: 'Мастер ближнего боя. Огромный запас здоровья и тяжелая броня. Защищает союзников, провоцируя врагов.',
-  Cleric: 'Величайший целитель. Владеет мощными исцеляющими заклинаниями и божественными щитами. Незаменим в любом подземелье.',
-  Paladin: 'Священный рыцарь. Сочетает урон в ближнем бою со святым исцелением и изгнанием нежити.',
-  'Shadow Knight': 'Темный рыцарь. Сочетает латную броню с болезнями, вампиризмом и заклинаниями страха.',
-  Ranger: 'Хранитель дикой природы и стрелок. Наносит стремительный урон из лука или в ближнем бою.',
-  Druid: 'Единение с природой. Использует лесную магию стихий, исцеление и мгновенные телепорты.',
-  Monk: 'Мастер рукопашного боя. Сочетает серии ударов, медитацию, самоисцеление и притворную смерть.',
-  Bard: 'Менестрель. Исполняет песни, непрерывно усиливающие регенерацию маны, скорость и урон группы.',
-  Rogue: 'Неуловимый убийца. Наносит сокрушительные удары в спину из режима скрытности.',
-  Shaman: 'Племенной знахарь. Накладывает сильнейшие баффы на параметры, ослабляет врагов и варит зелья.',
-  Necromancer: 'Повелитель смерти. Призывает скелетов-прислужников, вытягивает жизнь и преобразует здоровье в ману.',
-  Wizard: 'Чистый разрушитель. Уничтожает противников колоссальными заклинаниями огня, льда и молнии.',
-  Magician: 'Призыватель стихий. Призывает пылающих элементалей и создает магическую экипировку.',
-  Enchanter: 'Мастер контроля разума. Обеспечивает колоссальный прилив маны группе и парализует врагов.',
+  Warrior: 'Мастер ближнего боя. Может стать Берсерком, Рыцарем или Стражем.',
+  Mage: 'Повелитель стихий и тайной магии. Может стать Элементалистом, Арканом или Некромантом.',
+  Ranger: 'Хранитель дикой природы и стрелок. Может стать Охотником, Стрелком или Природным Стражем.',
+  Priest: 'Связной богов. Владеет мощными исцеляющими заклинаниями. Спеки: Светоносец, Теневой Целитель, Балансёр.',
+  Rogue: 'Неуловимый боец. Наносит сокрушительные удары в спину. Спеки: Убийца, Теневой Танцор, Механик.',
+  Summoner: 'Призывает существ на свою сторону. Спеки: Духовод, Повелитель Демонов, Техно-призыватель.',
+  Paladin: 'Священный воин со специализациями Каратель, Защитник, Крестоносец.',
+  Shaman: 'Знахарь и повелитель духов. Спеки: Стихийный, Духовный, Кровавый.',
 };
 
 export const RACE_BONUSES: Record<CharacterRace, { stats: Partial<CombatStats>; description: string }> = {
-  Human: { stats: { cha: 5, sta: 2 }, description: 'Универсален и ловок, приветствуется в любой гильдии.' },
-  Barbarian: { stats: { str: 10, sta: 5 }, description: 'Могучие северные гиганты из Вечных Льдов. Обладают навыком сокрушения.' },
-  Erudite: { stats: { int: 15, wis: 5, cha: -5 }, description: 'Великие ученые тайных искусств. Непревзойденный интеллект.' },
-  'Wood Elf': { stats: { agi: 10, dex: 5 }, description: 'Ловкие лесные жители. Обладают отличным зрением и высокой скоростью.' },
-  'High Elf': { stats: { wis: 10, int: 5, str: -5 }, description: 'Благословлены Тунаре. Грациозные, одухотворенные и глубоко верующие.' },
-  'Dark Elf': { stats: { int: 10, dex: 10, cha: -10 }, description: 'Жители темного Нериака. Владеют ночным зрением, скрытны и коварны.' },
-  Dwarf: { stats: { sta: 15, str: 10, cha: -5 }, description: 'Крепкие латные воины. Отличное сопротивление магии и ядам.' },
-  Halfling: { stats: { dex: 15, agi: 5 }, description: 'Любознательные и скрытные первооткрыватели. Бонус к скрытности.' },
-  Gnome: { stats: { int: 10, dex: 10 }, description: 'Изобретательные инженеры и знатоки техно-магии.' },
-  Ogre: { stats: { str: 20, sta: 15, int: -15, cha: -15 }, description: 'Колоссальная физическая мощь. Неудержимы, иммунны к оглушению спереди.' },
-  Troll: { stats: { sta: 20, str: 10, int: -15, wis: -10 }, description: 'Стремительные болотные охотники. Обладают невероятно быстрой естественной регенерацией здоровья.' },
-  Iksar: { stats: { agi: 10, sta: 5, wis: 5, cha: -10 }, description: 'Рептилии Кунарка. Чешуйчатая кожа дает высокий показатель брони.' },
+  Human: { stats: { str: 5, sta: 5, agi: 5, dex: 5, int: 5, wis: 5, cha: 5 }, description: 'Универсальные. +10% опыт от квестов. Бонус ко всем атрибутам.' },
+  'High Elf': { stats: { int: 15, dex: 10 }, description: 'Магические. Увеличенная регенерация маны.' },
+  Orc: { stats: { str: 15, sta: 10 }, description: 'Воинственные. Ярость в бою (временный буст).' },
+  Dwarf: { stats: { sta: 20 }, description: 'Танковые / Крафт. Сопротивление урону + бонус к крафту.' },
+  Dragonborn: { stats: { str: 15, int: 15 }, description: 'Гибридные. Огненное дыхание (активное умение).' },
+  'Moon Spirit': { stats: { dex: 15, int: 15 }, description: 'Поддержка / Мобильные. Фазовый сдвиг (уклонение).' },
+  'Dark Elf': { stats: { int: 20 }, description: 'Теневая магия. Бонус к урону в темноте.' },
+  'Mechanical Construct': { stats: { sta: 25 }, description: 'Техно-магические. Самовосстановление + устойчивость к магии.' },
 };
 
 export const SYSTEM_DEITIES = [
-  'Митраниэль Марр (Доблесть)',
-  'Тунаре (Мать Всего сущего)',
-  'Казик-Туле (Повелитель Страха)',
-  'Инноруук (Принц Ненависти)',
-  'Солусек Ро (Пылающий Принц)',
-  'Брелл Серилис (Герцог Подземелья)',
-  'Трибунал (Правосудие)',
-  'Раллос Зек (Командующий Войной)',
-  'Родсет Найф (Главный Целитель)',
+  'Свет (Митраниэль)',
+  'Тьма (Инноруук)',
+  'Баланс (Тунаре)',
+  'Древние (Забытые боги)',
+  'Атеист',
 ];
 
 export const INITIAL_BASE_STATS: Record<CharacterClass, CombatStats> = {
   Warrior: { str: 85, sta: 90, agi: 80, dex: 80, int: 50, wis: 50, cha: 60 },
-  Cleric: { str: 70, sta: 75, agi: 70, dex: 70, int: 60, wis: 85, cha: 75 },
-  Paladin: { str: 80, sta: 85, agi: 75, dex: 75, int: 50, wis: 70, cha: 75 },
-  'Shadow Knight': { str: 80, sta: 85, agi: 75, dex: 75, int: 70, wis: 50, cha: 60 },
+  Mage: { str: 60, sta: 70, agi: 75, dex: 75, int: 90, wis: 60, cha: 60 },
   Ranger: { str: 75, sta: 75, agi: 85, dex: 80, int: 55, wis: 65, cha: 65 },
-  Druid: { str: 65, sta: 70, agi: 75, dex: 70, int: 60, wis: 85, cha: 70 },
-  Monk: { str: 80, sta: 80, agi: 85, dex: 85, int: 50, wis: 50, cha: 55 },
-  Bard: { str: 75, sta: 75, agi: 80, dex: 75, int: 60, wis: 60, cha: 85 },
+  Priest: { str: 60, sta: 75, agi: 70, dex: 70, int: 70, wis: 85, cha: 70 },
   Rogue: { str: 75, sta: 70, agi: 85, dex: 90, int: 50, wis: 50, cha: 60 },
-  Shaman: { str: 70, sta: 80, agi: 70, dex: 70, int: 50, wis: 80, cha: 65 },
-  Necromancer: { str: 60, sta: 70, agi: 75, dex: 75, int: 85, wis: 60, cha: 55 },
-  Wizard: { str: 60, sta: 70, agi: 75, dex: 75, int: 90, wis: 60, cha: 60 },
-  Magician: { str: 60, sta: 70, agi: 75, dex: 75, int: 85, wis: 60, cha: 60 },
-  Enchanter: { str: 60, sta: 70, agi: 70, dex: 75, int: 85, wis: 65, cha: 80 },
+  Summoner: { str: 60, sta: 70, agi: 70, dex: 75, int: 85, wis: 70, cha: 70 },
+  Paladin: { str: 80, sta: 85, agi: 75, dex: 75, int: 50, wis: 70, cha: 75 },
+  Shaman: { str: 70, sta: 80, agi: 70, dex: 70, int: 60, wis: 80, cha: 65 },
 };
 
 export const GAME_ZONES: Zone[] = [
   {
-    id: 'valoria-continent',
-    name: 'Авалон (Стартовый Континент)',
-    description: 'Огромный бесшовный континент площадью более 40 000 км². Великолепные леса, реки и скалистые хребты. Здесь расположены ключевые хабы и торговые площади начинающих гильдий.',
+    id: 'starter-hills',
+    name: 'Серебряные Луга Элиссии',
+    description: 'Огромная, но уютная зона. Яркие зелёные луга, древние каменные круги, светящиеся бабочки, небольшие ручьи с кристально чистой водой.',
     minLevel: 1,
     difficulty: 'Safe',
     imageUrl: 'https://images.unsplash.com/photo-1542224566-6e85f2e6772f?q=80&w=1920&auto=format&fit=crop',
     monsters: [
-      { name: 'Вожак стаи равнин', level: 2, hp: 35 },
-      { name: 'Механический страж', level: 5, hp: 80 },
-      { name: 'Лесной энт-стражник', level: 8, hp: 150 },
-      { name: 'Алчный мародер', level: 12, hp: 300 },
+      { name: 'Теневая Сущность', level: 3, hp: 45 },
+      { name: 'Дикий Волк', level: 5, hp: 80 },
+      { name: 'Малый Теневой Страж', level: 8, hp: 250, isBoss: true },
     ],
-    connections: ['cyber-megacity', 'volcanic-wastes'],
+    connections: ['broken-stars-valley'],
+    events: [
+      { name: 'Вторжение Теней', type: 'cyclic', frequency: 'Каждые 40 мин', reward: 'Опыт, серебро', description: 'Из Разлома вылезают Теневые Сущности. Защитите светящиеся кристаллы!' },
+    ],
+    pointsOfInterest: ['Деревня Элиссия', 'Разбитый Храм', 'Древний Алтарь'],
   },
   {
-    id: 'cyber-megacity',
-    name: 'Неокарния (Кибер-Мегаполис)',
-    description: 'Огромный многоуровневый неоновый мегаполис, работающий на техномагии. Сотни игроков торгуют на парящих аукционах, создают кибер-импланты и ведут теневые разборки синдикатов.',
-    minLevel: 15,
+    id: 'broken-stars-valley',
+    name: 'Долина Разбитых Звёзд',
+    description: 'Средние земли. Обширные поляные, где на землю обрушились осколки древних астральных тел. Место повышенной магической активности.',
+    minLevel: 20,
     difficulty: 'Easy',
     imageUrl: 'https://images.unsplash.com/photo-1515281239448-2afe2491a134?q=80&w=1920&auto=format&fit=crop',
     monsters: [
-      { name: 'Беглый киборг', level: 15, hp: 450 },
-      { name: 'Служебный дрон-ликвидатор', level: 18, hp: 600 },
-      { name: 'Синдикатский боевик', level: 22, hp: 850 },
-      { name: 'ИИ-Надзиратель Альфа', level: 25, hp: 3200, isBoss: true },
+      { name: 'Звёздный Сталкер', level: 25, hp: 600 },
+      { name: 'Искажённый Голем', level: 30, hp: 1200 },
+      { name: 'Пробуждённый Метеорит', level: 35, hp: 4500, isBoss: true },
     ],
-    connections: ['valoria-continent', 'abyssal-depths'],
+    connections: ['starter-hills', 'mountain-ridge'],
+    events: [
+      { name: 'Падение Осколка', type: 'cyclic', frequency: 'Каждые 90 мин', reward: 'Материалы, руда', description: 'С неба падает звездный осколок. Добудьте редкие ресурсы, пока их не захватили големы.' }
+    ],
+    pointsOfInterest: ['Кратер Забытых', 'Башня Астроманта'],
   },
   {
-    id: 'volcanic-wastes',
-    name: 'Пепельные Пустоши (Вулкан)',
-    description: 'Опасный биом, где лавовые реки постоянно меняют русло из-за динамических событий мира. Сюда со всего мира стягиваются кузнецы в поисках редчайшей раскаленной руды.',
-    minLevel: 30,
+    id: 'mountain-ridge',
+    name: 'Горный Хребет Вел’Дарион',
+    description: 'Огромные заснеженные горы и глубокие ущелья. Вертикальность на максимуме: множество парящих платформ, ледяных мостов, пещер.',
+    minLevel: 35,
     difficulty: 'Medium',
-    imageUrl: 'https://images.unsplash.com/photo-1614210408544-7f1dfa832f05?q=80&w=1920&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=1920&auto=format&fit=crop',
     monsters: [
-      { name: 'Обсидиановый голем', level: 30, hp: 1500 },
-      { name: 'Лавовая саламандра', level: 35, hp: 2200 },
-      { name: 'Пепельный элементаль', level: 38, hp: 2800 },
-      { name: 'Владыка Инферно', level: 42, hp: 8500, isBoss: true },
+      { name: 'Ледяной Виверн', level: 40, hp: 3500 },
+      { name: 'Горный Тролль', level: 45, hp: 5500 },
+      { name: 'Ледяной Дракон Тиран', level: 50, hp: 15000, isBoss: true },
     ],
-    connections: ['valoria-continent', 'cosmic-galaxy'],
+    connections: ['broken-stars-valley', 'whispering-jungles'],
+    events: [
+      { name: 'Нашествие Теней', type: 'cyclic', frequency: 'Каждые 2 часа', reward: 'Репутация фракций', description: 'Волны мобов пытаются прорваться через горный перевал.' },
+      { name: 'Караван Хранителей', type: 'cyclic', frequency: 'Каждые 3 часа', reward: 'Редкие ресурсы', description: 'Защитите караван по узким горным тропам от ледяных виверн.' }
+    ],
+    pointsOfInterest: ['Ледяная Крепость', 'Долина Тысячи Водопадов', 'Древний Драконий Храм'],
   },
   {
-    id: 'abyssal-depths',
-    name: 'Лемурия (Подводные Глубины)',
-    description: 'Мифический подводный город-государство. Исследование требует артефактов дыхания под водой. Радикально изменяет физику передвижения и боя среди коралловых рифов.',
-    minLevel: 45,
+    id: 'whispering-jungles',
+    name: 'Шепчущие Джунгли Зара’Тул',
+    description: 'Густые тропические леса с гигантскими деревьями и биолюминесценцией. Много наземного и воздушного уровня.',
+    minLevel: 50,
+    difficulty: 'Medium',
+    imageUrl: 'https://images.unsplash.com/photo-1518182170546-076616fdcb67?q=80&w=1920&auto=format&fit=crop',
+    monsters: [
+      { name: 'Ядовитый Плеть', level: 55, hp: 6000 },
+      { name: 'Страж Кроны', level: 60, hp: 8500 },
+      { name: 'Мать Роя', level: 65, hp: 25000, isBoss: true },
+    ],
+    connections: ['mountain-ridge', 'burning-wastes'],
+    events: [
+      { name: 'Гнев Леса', type: 'dynamic', frequency: 'Случайно', reward: 'Редкие травы', description: 'Экологическое событие: Лес "разозлился" из-за слишком частой рубки деревьев.' }
+    ],
+    pointsOfInterest: ['Священное Древо', 'Руины Ядозубов'],
+  },
+  {
+    id: 'burning-wastes',
+    name: 'Пылающие Пустоши Аш’Кара',
+    description: 'Красные пустыни, вулканы, лавовые реки. Очень враждебная среда.',
+    minLevel: 65,
+    difficulty: 'Hard',
+    imageUrl: 'https://images.unsplash.com/photo-1590518335032-68dfdb14022c?q=80&w=1920&auto=format&fit=crop',
+    monsters: [
+      { name: 'Пепельный Червь', level: 70, hp: 12000 },
+      { name: 'Лавовый Голем', level: 75, hp: 18000 },
+      { name: 'Владыка Пепла', level: 80, hp: 45000, isBoss: true },
+    ],
+    connections: ['whispering-jungles', 'central-rift'],
+    events: [
+      { name: 'Поющая Буря', type: 'cyclic', frequency: 'Каждые 4 часа', reward: 'Бонусы к опыту', description: 'Магическая буря меняет ландшафт на 15 мин.' }
+    ],
+    pointsOfInterest: ['Вулкан Слез', 'Лагерь Изгнанников'],
+  },
+  {
+    id: 'central-rift',
+    name: 'Центральный Разлом',
+    description: 'Endgame зона. Динамическая, постоянно меняющаяся территория штормов маны и искажённой гравитацией.',
+    minLevel: 80,
     difficulty: 'Hard',
     imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=1920&auto=format&fit=crop',
     monsters: [
-      { name: 'Глубинный охотник', level: 45, hp: 4000 },
-      { name: 'Жрец культа Дагона', level: 48, hp: 5500 },
-      { name: 'Кракен-надзиратель', level: 52, hp: 8000 },
-      { name: 'Левиафан Лемурии', level: 55, hp: 25000, isBoss: true },
+      { name: 'Порождение Бездны', level: 80, hp: 15000 },
+      { name: 'Магическая аномалия', level: 82, hp: 20000 },
+      { name: 'Осколок Ужаса', level: 85, hp: 60000, isBoss: true },
     ],
-    connections: ['cyber-megacity', 'cosmic-galaxy'],
+    connections: ['burning-wastes', 'sky-archipelago'],
+    events: [
+      { name: 'Великий Разлом', type: 'world', frequency: 'Раз в 2 недели', reward: 'Эпическая экипировка', description: 'World Event: Центральный Разлом активируется на 2 часа.' }
+    ],
   },
   {
-    id: 'cosmic-galaxy',
-    name: 'Эфирные Рубежи (Космос)',
-    description: 'Бесконечные параллельные измерения и астральный космос. Игроки путешествуют на воздушных и космических кораблях, участвуя в масштабных рейдах на гигантских боссов.',
-    minLevel: 60,
+    id: 'sky-archipelago',
+    name: 'Небесный Архипелаг',
+    description: 'Огромные летающие острова и вулканические массивы. Вертикальный биом, требующий планера для перемещения.',
+    minLevel: 85,
+    difficulty: 'Hard',
+    imageUrl: 'https://images.unsplash.com/photo-1614210408544-7f1dfa832f05?q=80&w=1920&auto=format&fit=crop',
+    monsters: [
+      { name: 'Астральный наблюдатель', level: 86, hp: 25000 },
+      { name: 'Воздушный змей', level: 88, hp: 35000 },
+      { name: 'Кочующий Небесный Кит', level: 90, hp: 100000, isBoss: true },
+    ],
+    connections: ['central-rift', 'abyss-underworld'],
+    events: [
+      { name: 'Падение Небес', type: 'world', frequency: 'Редко', reward: 'Новые зоны, Опыт', description: 'Крупное событие: падение нового острова.' }
+    ],
+  },
+  {
+    id: 'abyss-underworld',
+    name: 'Бездна Под Миром',
+    description: 'Мрачные глубины, где не светит солнце. Место обитания древних монстров.',
+    minLevel: 90,
+    difficulty: 'Raid',
+    imageUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920&auto=format&fit=crop',
+    monsters: [
+      { name: 'Слепой Охотник', level: 92, hp: 45000 },
+      { name: 'Темный Слуга', level: 94, hp: 60000 },
+      { name: 'Пробуждённый Древний', level: 95, hp: 250000, isBoss: true },
+    ],
+    connections: ['sky-archipelago', 'broken-horizon'],
+    events: [
+      { name: 'Пробуждение Древнего', type: 'cyclic', frequency: '1 раз в 6 часов', reward: 'Эпическая экипировка', description: 'Мировой босс (требует 20–50 игроков).' }
+    ],
+  },
+  {
+    id: 'broken-horizon',
+    name: 'Край Разорванного Горизонта',
+    description: 'Край карты, где мир буквально обрывается в неизведанное.',
+    minLevel: 95,
     difficulty: 'Raid',
     imageUrl: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=1920&auto=format&fit=crop',
     monsters: [
-      { name: 'Астральный пожиратель', level: 60, hp: 15000 },
-      { name: 'Фантом пустоты', level: 65, hp: 22000 },
-      { name: 'Рыцарь Черной Дыры', level: 70, hp: 35000 },
-      { name: 'Титанический Космический Бог', level: 80, hp: 150000, isBoss: true },
+      { name: 'Эхо Забытых Времен', level: 98, hp: 80000 },
+      { name: 'Страж Границы', level: 99, hp: 150000 },
+      { name: 'Древний Титан Этерии', level: 100, hp: 1000000, isBoss: true },
     ],
-    connections: ['volcanic-wastes', 'abyssal-depths'],
+    connections: ['abyss-underworld'],
+    events: [
+      { name: 'Война Фракций', type: 'world', frequency: 'Раз в месяц', reward: 'Глобальные бонусы', description: 'Глобальное PvP-событие.' }
+    ],
   },
 ];
 
@@ -174,7 +238,7 @@ export const STARTING_GEAR: Partial<Record<CharacterClass, Partial<Record<string
       stats: { sta: 3, ac: 8 },
     },
   },
-  Cleric: {
+  Priest: {
     primary: {
       id: 'wooden-mace',
       name: 'Благословленная деревянная mace',
@@ -194,7 +258,7 @@ export const STARTING_GEAR: Partial<Record<CharacterClass, Partial<Record<string
       stats: { wis: 2, mana: 15 },
     },
   },
-  Wizard: {
+  Mage: {
     primary: {
       id: 'cracked-staff',
       name: 'Треснувший деревянный посох',
@@ -218,11 +282,11 @@ export const STARTING_GEAR: Partial<Record<CharacterClass, Partial<Record<string
 
 export const COMMON_TEMPLATES = {
   merchantItems: [
-    { id: 'iron-helmet', name: 'Латный железный шлем', slot: 'head', description: 'Тяжелый боевой шлем, обеспечивающий превосходную защиту.', price: 45, rarity: 'uncommon', stats: { sta: 3, ac: 10 }, allowedClasses: ['Warrior', 'Paladin', 'Shadow Knight', 'Cleric'] },
-    { id: 'leather-boots', name: 'Эльфийские кожаные сапоги', slot: 'feet', description: 'Легкие сапоги, созданные эльфами для бесшумного бега.', price: 25, rarity: 'uncommon', stats: { agi: 4, ac: 4 }, allowedClasses: ['Ranger', 'Druid', 'Rogue', 'Monk', 'Bard', 'Shaman'] },
-    { id: 'mana-ring', name: 'Сверкающее платиновое кольцо', slot: 'secondary', description: 'Сверкающий перстень, наделенный чистой эссенцией маны.', price: 75, rarity: 'rare', stats: { int: 5, wis: 5, mana: 30 }, allowedClasses: ['Wizard', 'Enchanter', 'Magician', 'Necromancer', 'Cleric', 'Druid', 'Shaman'] },
-    { id: 'rubicund-breastplate', name: 'Рубиновый нагрудник', slot: 'chest', description: 'Легендарный сияющий доспех защитников Этернии.', price: 250, rarity: 'epic', stats: { str: 10, sta: 12, ac: 25, hp: 80 }, allowedClasses: ['Warrior', 'Paladin', 'Shadow Knight', 'Cleric'] },
-    { id: 'ghoulbane', name: 'Клирик-Паладинский Бич Проклятых', slot: 'primary', description: 'Легендарный сияющий клинок праведного гнева, наносящий двойной урон нежити.', price: 400, rarity: 'epic', stats: { str: 14, wis: 8, ac: 10, hp: 50 }, allowedClasses: ['Paladin', 'Cleric'] },
+    { id: 'iron-helmet', name: 'Латный железный шлем', slot: 'head', description: 'Тяжелый боевой шлем, обеспечивающий превосходную защиту.', price: 45, rarity: 'uncommon', stats: { sta: 3, ac: 10 }, allowedClasses: ['Warrior', 'Paladin', 'Priest'] },
+    { id: 'leather-boots', name: 'Эльфийские кожаные сапоги', slot: 'feet', description: 'Легкие сапоги, созданные эльфами для бесшумного бега.', price: 25, rarity: 'uncommon', stats: { agi: 4, ac: 4 }, allowedClasses: ['Ranger', 'Rogue', 'Shaman'] },
+    { id: 'mana-ring', name: 'Сверкающее платиновое кольцо', slot: 'secondary', description: 'Сверкающий перстень, наделенный чистой эссенцией маны.', price: 75, rarity: 'rare', stats: { int: 5, wis: 5, mana: 30 }, allowedClasses: ['Mage', 'Summoner', 'Priest', 'Shaman'] },
+    { id: 'rubicund-breastplate', name: 'Рубиновый нагрудник', slot: 'chest', description: 'Легендарный сияющий доспех защитников Этернии.', price: 250, rarity: 'epic', stats: { str: 10, sta: 12, ac: 25, hp: 80 }, allowedClasses: ['Warrior', 'Paladin', 'Priest'] },
+    { id: 'ghoulbane', name: 'Клирик-Паладинский Бич Проклятых', slot: 'primary', description: 'Легендарный сияющий клинок праведного гнева, наносящий двойной урон нежити.', price: 400, rarity: 'epic', stats: { str: 14, wis: 8, ac: 10, hp: 50 }, allowedClasses: ['Paladin', 'Priest'] },
   ] as Item[],
 
   simulatedNames: [

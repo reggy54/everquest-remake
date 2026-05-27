@@ -45,7 +45,7 @@ const COMPANIONS: CompanionRP[] = [
   {
     id: 'comp-2',
     name: 'Жрица Соня',
-    class: 'Cleric',
+    class: 'Priest',
     friendLevel: 30,
     unlockedBuff: 'Милость Сони: +30 к Максимальной Мане (Mana)',
     buffStats: { mana: 30 },

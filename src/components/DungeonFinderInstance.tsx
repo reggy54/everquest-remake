@@ -97,7 +97,7 @@ export default function DungeonFinderInstance({ character, onUpdateCharacter, tr
     // Initialize 3 Simulated Companion Bots to make a 4-man classic group!
     const companionBots: PartyCompanion[] = [
       { name: 'Латник Торгар (БОТ)', class: 'Paladin', hp: 350 + character.level * 30, maxHp: 350 + character.level * 30, role: 'tank' },
-      { name: 'Жрица Соня (БОТ)', class: 'Cleric', hp: 180 + character.level * 15, maxHp: 180 + character.level * 15, role: 'healer' },
+      { name: 'Жрица Соня (БОТ)', class: 'Priest', hp: 180 + character.level * 15, maxHp: 180 + character.level * 15, role: 'healer' },
       { name: 'Оникс Снайпер (БОТ)', class: 'Ranger', hp: 220 + character.level * 20, maxHp: 220 + character.level * 20, role: 'dps' }
     ];
 

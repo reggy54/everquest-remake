@@ -8,6 +8,7 @@ import {
   STARTING_GEAR,
 } from '../data/gameData';
 import { Shield, Sparkles, Wand2, RefreshCw } from 'lucide-react';
+import Character3DModel from './Character3DModel';
 
 interface CharacterCreatorProps {
   onCreated: (character: PlayerCharacter) => void;
@@ -16,34 +17,24 @@ interface CharacterCreatorProps {
 
 const RU_CLASSES: Record<CharacterClass, string> = {
   Warrior: 'Воин',
-  Cleric: 'Клирик',
-  Paladin: 'Паладин',
-  'Shadow Knight': 'Рыцарь Тьмы',
-  Ranger: 'Следопыт',
-  Druid: 'Друид',
-  Monk: 'Монах',
-  Bard: 'Бард',
+  Mage: 'Маг',
+  Ranger: 'Рейнджер',
+  Priest: 'Жрец',
   Rogue: 'Разбойник',
+  Summoner: 'Призыватель',
+  Paladin: 'Паладин',
   Shaman: 'Шаман',
-  Necromancer: 'Некромант',
-  Wizard: 'Чародей',
-  Magician: 'Маг',
-  Enchanter: 'Иллюзионист',
 };
 
 const RU_RACES: Record<CharacterRace, string> = {
-  Human: 'Человек',
-  Barbarian: 'Варвар',
-  Erudite: 'Эрудит',
-  'Wood Elf': 'Лесной Эльф',
-  'High Elf': 'Высший Эльф',
-  'Dark Elf': 'Темный Эльф',
-  Dwarf: 'Дворф',
-  Halfling: 'Полурослик',
-  Gnome: 'Гном',
-  Ogre: 'Огр',
-  Troll: 'Тролль',
-  Iksar: 'Иксар',
+  Human: 'Люди (Элиссийцы)',
+  'High Elf': 'Высшие Эльфы',
+  Orc: 'Орки (Кровавые Клыки)',
+  Dwarf: 'Дварфы',
+  Dragonborn: 'Драконорождённые',
+  'Moon Spirit': 'Лунные Духи',
+  'Dark Elf': 'Тёмные Эльфы',
+  'Mechanical Construct': 'Механические Конструкты',
 };
 
 const RU_STATS: Record<keyof CombatStats, string> = {
@@ -57,35 +48,25 @@ const RU_STATS: Record<keyof CombatStats, string> = {
 };
 
 const RU_CLASS_DESC: Record<CharacterClass, string> = {
-  Warrior: 'Мастер ближнего боя. Огромный запас здоровья и тяжелая броня. Защищает союзников, провоцируя врагов.',
-  Cleric: 'Величайший целитель в Norrath. Владеет мощными исцеляющими заклинаниями и божественными щитами.',
-  Paladin: 'Священный воин. Сочетает мощные атаки ближнего боя со святым исцелением и изгнанием нежити.',
-  'Shadow Knight': 'Темный рыцарь. Сочетает латную броню с болезнями, вампиризмом и заклинаниями страха.',
-  Ranger: 'Хранитель дикой природы и стрелок. Наносит стремительный урон из лука или в ближнем бою.',
-  Druid: 'Единение с природой. Использует магию стихий, исцеление и мгновенные телепорты.',
-  Monk: 'Мастер рукопашного боя. Сочетает мощные серии ударов, медитацию, самоисцеление и притворную смерть.',
-  Bard: 'Менестрель. Исполняет песни, непрерывно усиливающие регенерацию маны, скорость и урон группы.',
-  Rogue: 'Неуловимый убийца. Наносит сокрушительные удары в спину из режима скрытности.',
-  Shaman: 'Племенной знахарь. Накладывает сильнейшие баффы на параметры, ослабляет врагов и варит зелья.',
-  Necromancer: 'Повелитель смерти. Призывает скелетов-прислужников, вытягивает жизнь и преобразует здоровье в ману.',
-  Wizard: 'Чистый разрушитель. Уничтожает противников колоссальными заклинаниями огня, льда и молнии.',
-  Magician: 'Призыватель стихий. Призывает пылающих элементалей и создает магическую экипировку.',
-  Enchanter: 'Мастер контроля разума. Обеспечивает колоссальный прилив маны группе и парализует врагов.',
+  Warrior: 'Берсерк / Рыцарь / Страж. Огромный запас здоровья и тяжелая броня.',
+  Mage: 'Элементалист / Аркан / Некромант. Разрушительная стихийная и тайная магия.',
+  Ranger: 'Охотник / Стрелок / Природный Страж. Мастер дистанционного боя и ловушек.',
+  Priest: 'Светоносец / Теневой Целитель / Балансёр. Связной богов, исцеляет или карает.',
+  Rogue: 'Убийца / Теневой Танцор / Механик. Быстрый, незаметный, смертоносный.',
+  Summoner: 'Духовод / Повелитель Демонов / Техно-призыватель. Ведет в бой призванных существ.',
+  Paladin: 'Каратель / Защитник / Крестоносец. Воин света, защищающий союзников.',
+  Shaman: 'Стихийный / Духовный / Кровавый. Использует силы природы и духов для баффов и исцеления.',
 };
 
 const RU_RACE_DESC: Record<CharacterRace, string> = {
-  Human: 'Универсален и ловок, приветствуется в любой гильдии.',
-  Barbarian: 'Могучие серверные гиганты из Вечных Льдов. Мощные физические атаки.',
-  Erudite: 'Великие ученые тайных искусств. Непревзойденный интеллект.',
-  'Wood Elf': 'Ловкие лесные жители. Обладают отличным зрением и высокой скоростью.',
-  'High Elf': 'Благословлены Тунаре. Грациозные, одухотворенные и мудрые.',
-  'Dark Elf': 'Жители темного Нериака. Владеют ночным зрением, скрытны и коварны.',
-  Dwarf: 'Крепкие латные воины. Отличное сопротивление магии и ядам.',
-  Halfling: 'Любознательные и скрытные первооткрыватели. Бонус к скрытности.',
-  Gnome: 'Изобретательные инженеры и знатоки техно-магии.',
-  Ogre: 'Прочные каменные гиганты. Иммунитет к оглушению спереди, колоссальная мощь.',
-  Troll: 'Жители болот. Обладают невероятно быстрой естественной регенерацией здоровья.',
-  Iksar: 'Рептилии Кунарка. Чешуйчатая кожа дает высокий показатель брони.',
+  Human: 'Универсальные. +10% опыт от квестов. Бонус ко всем атрибутам.',
+  'High Elf': 'Магические. Увеличенная регенерация маны.',
+  Orc: 'Воинственные. Ярость в бою (временный буст).',
+  Dwarf: 'Танковые / Крафт. Сопротивление урону + бонус к крафту.',
+  Dragonborn: 'Гибридные. Огненное дыхание (активное умение).',
+  'Moon Spirit': 'Поддержка / Мобильные. Фазовый сдвиг (уклонение).',
+  'Dark Elf': 'Теневая магия. Бонус к урону в темноте.',
+  'Mechanical Construct': 'Техно-магические. Самовосстановление + устойчивость к магии.',
 };
 
 export default function CharacterCreator({ onCreated, language = 'ru' }: CharacterCreatorProps) {
@@ -132,11 +113,10 @@ export default function CharacterCreator({ onCreated, language = 'ru' }: Charact
     
     let primaryStats: (keyof CombatStats)[] = [];
     switch (selectedClass) {
-      case 'Warrior': case 'Monk': case 'Rogue': primaryStats = ['str', 'sta', 'dex', 'agi']; break;
-      case 'Cleric': case 'Paladin': case 'Druid': case 'Shaman': primaryStats = ['wis', 'sta']; break;
-      case 'Wizard': case 'Magician': case 'Enchanter': case 'Necromancer': primaryStats = ['int', 'sta']; break;
-      case 'Shadow Knight': primaryStats = ['int', 'str', 'sta']; break;
-      case 'Ranger': case 'Bard': primaryStats = ['dex', 'str', 'sta', 'cha']; break;
+      case 'Warrior': case 'Rogue': primaryStats = ['str', 'sta', 'dex', 'agi']; break;
+      case 'Priest': case 'Paladin': case 'Shaman': primaryStats = ['wis', 'sta', 'str']; break;
+      case 'Mage': case 'Summoner': primaryStats = ['int', 'sta']; break;
+      case 'Ranger': primaryStats = ['dex', 'str', 'sta', 'agi']; break;
       default: primaryStats = ['sta'];
     }
 
@@ -177,9 +157,9 @@ export default function CharacterCreator({ onCreated, language = 'ru' }: Charact
     };
 
     // Calculate level health and mana
-    const multiplier = selectedClass === 'Warrior' ? 12 : selectedClass === 'Cleric' ? 8 : 6;
+    const multiplier = (selectedClass === 'Warrior' || selectedClass === 'Paladin') ? 12 : selectedClass === 'Priest' ? 8 : 6;
     const baseHp = 100 + finalStats.sta * multiplier;
-    const baseMana = (selectedClass === 'Wizard' || selectedClass === 'Cleric' || selectedClass === 'Enchanter')
+    const baseMana = (selectedClass === 'Mage' || selectedClass === 'Priest' || selectedClass === 'Summoner' || selectedClass === 'Shaman')
       ? 80 + finalStats.int * 5
       : 30;
 
@@ -187,13 +167,19 @@ export default function CharacterCreator({ onCreated, language = 'ru' }: Charact
     const templateGear = STARTING_GEAR[selectedClass] || {};
     const equipment: Record<SlotType, Item | null> = {
       head: null,
+      shoulders: null,
       chest: (templateGear.chest as Item) || null,
-      arms: null,
-      legs: null,
       hands: (templateGear.hands as Item) || null,
+      waist: null,
+      legs: null,
       feet: null,
+      cloak: null,
+      amulet: null,
+      ring1: null,
+      ring2: null,
       primary: (templateGear.primary as Item) || null,
       secondary: null,
+      fateFocus: null,
     };
 
     const starterQuests = [
@@ -254,206 +240,245 @@ export default function CharacterCreator({ onCreated, language = 'ru' }: Charact
   };
 
   return (
-    <div className="w-full relative z-0 flex items-center justify-center">
-      {/* Background Image Effect */}
-      <div 
-        className="fixed inset-0 bg-cover bg-center opacity-30 pointer-events-none mix-blend-overlay -z-10"
-        style={{ backgroundImage: `url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920&auto=format&fit=crop')` }}
-      ></div>
-      <div className="fixed inset-0 bg-gradient-to-b from-slate-950/60 to-slate-1000 pointer-events-none -z-10"></div>
-
-      <div className="relative z-10 w-full max-w-4xl mx-auto rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden p-6 md:p-8 animate-fade-in text-gray-100 my-8">
-        <div className="text-center mb-8">
-        <h2 className="font-sans text-3xl font-extrabold tracking-tight text-white flex items-center justify-center gap-2">
-          <Sparkles className="h-8 w-8 text-amber-500" />
-          {language === 'ru' ? 'Открытый Мир • Создание Героя' : 'Open World • Character Creation'}
-        </h2>
-        <p className="text-slate-400 mt-2 text-sm max-w-lg mx-auto">
-          {language === 'ru' ? 'Сотворите легенду. Выберите происхождение, покровительство богов и распределите свои начальные характеристики.' : 'Forge a legend. Choose your origin, patron deity, and distribute your starting attributes.'}
-        </p>
+    <div className="w-full relative z-0 flex items-center justify-start min-h-screen">
+      {/* Background Cinematic 3D Scene */}
+      <div className="fixed inset-0 -z-10 bg-slate-950">
+         <Character3DModel charClass={selectedClass} race={selectedRace} equipment={{}} />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Name Select */}
-        <div className="bg-slate-800/80 p-5 rounded-lg border border-slate-700/60 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="w-full md:w-2/3">
-            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-slate-400 mb-2 font-bold whitespace-nowrap">
-              {language === 'ru' ? 'Имя вашего персонажа:' : 'Character Name:'}
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Пример: Grimgor_Bronze"
-              value={name}
-              onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z0-9_\u0400-\u04FF]/g, ''))}
-              maxLength={16}
-              className="w-full bg-slate-950 border border-slate-600 rounded px-4 py-2.5 text-base font-medium text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={generateRandomName}
-            className="w-full md:w-auto mt-6 bg-slate-700 hover:bg-slate-600 text-white font-medium px-4 py-2.5 rounded border border-slate-500 flex items-center justify-center gap-2 text-sm transition-all"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Случайное Имя
-          </button>
-        </div>
+      <div className="fixed inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/60 to-transparent pointer-events-none -z-10"></div>
+      <div className="fixed inset-0 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none -z-10 h-[30vh] bottom-0 top-auto"></div>
 
-        {/* 2-Column Selectors */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left Column: Race and Deity */}
-          <div className="space-y-6">
-            <div>
-              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-slate-400 mb-2 font-bold">
-                {language === 'ru' ? 'Выберите Расу:' : 'Select Race:'}
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {Object.keys(RACE_BONUSES).map((r) => (
+      {/* Floating Configuration Form */}
+      <div className="relative z-10 w-full max-w-[550px] ml-0 lg:ml-8 flex flex-col h-screen overflow-y-auto custom-scrollbar pointer-events-auto">
+        <div className="rounded-r-2xl lg:rounded-3xl bg-slate-900/60 backdrop-blur-2xl border-r lg:border border-slate-700/50 shadow-[0_0_50px_rgba(0,0,0,0.5)] p-8 my-4 lg:my-6 animate-fade-in text-gray-100 min-h-fit relative overflow-hidden ring-1 ring-black/20">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none" />
+          
+          <div className="text-left mb-8 relative z-10">
+            <h2 className="font-sans text-3xl font-black tracking-tight text-white flex items-center justify-start gap-3 drop-shadow-sm">
+              <Sparkles className="h-7 w-7 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+              {language === 'ru' ? 'Создание Героя' : 'Character Creation'}
+            </h2>
+            <p className="text-slate-400 mt-2 text-xs max-w-lg font-medium leading-relaxed">
+              {language === 'ru' ? 'Сотворите легенду. Выберите происхождение.' : 'Forge a legend. Choose your origin.'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+            {/* Name Select */}
+            <div className="bg-slate-950/40 p-5 rounded-2xl border border-slate-700/50 flex flex-col items-start gap-3 shadow-inner hover:border-slate-600 transition-colors">
+              <div className="w-full">
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-amber-500 mb-2 font-bold whitespace-nowrap drop-shadow-sm">
+                  {language === 'ru' ? 'Имя персонажа' : 'Character Name'}
+                </label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Пример: Grimgor_Bronze"
+                    value={name}
+                    onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z0-9_\u0400-\u04FF]/g, ''))}
+                    maxLength={16}
+                    className="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-3 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 transition-all shadow-sm"
+                  />
                   <button
-                    key={r}
                     type="button"
-                    onClick={() => {
-                      setSelectedRace(r as CharacterRace);
-                      setBonusStats({ str: 0, sta: 0, agi: 0, dex: 0, int: 0, wis: 0, cha: 0 });
-                      setAvailablePoints(20);
-                    }}
-                    className={`text-xs py-2 rounded font-medium border transition-all ${
-                      selectedRace === r
-                        ? 'bg-amber-500 border-amber-400 text-slate-950 font-bold'
-                        : 'bg-slate-955 hover:bg-slate-800 border-slate-700 text-slate-300'
-                    }`}
+                    onClick={generateRandomName}
+                    className="bg-slate-800 hover:bg-slate-700 text-amber-400 font-medium px-4 rounded-xl border border-slate-700 hover:border-amber-500/50 flex items-center justify-center transition-all shadow-sm"
+                    title="Случайное Имя"
                   >
-                    {language === 'ru' ? (RU_RACES[r as CharacterRace] || r) : r}
+                    <RefreshCw className="h-5 w-5" />
                   </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 1-Column Selectors for floating UI */}
+            <div className="space-y-5">
+              <div className="bg-slate-950/40 p-4 rounded-2xl border border-slate-700/50">
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-amber-500 mb-3 font-bold drop-shadow-sm">
+                  {language === 'ru' ? 'Раса:' : 'Race:'}
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {Object.keys(RACE_BONUSES).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => {
+                        setSelectedRace(r as CharacterRace);
+                        setBonusStats({ str: 0, sta: 0, agi: 0, dex: 0, int: 0, wis: 0, cha: 0 });
+                        setAvailablePoints(20);
+                      }}
+                      className={`text-[11px] py-2 px-3 rounded-lg font-bold border transition-all truncate text-left shadow-sm ${
+                        selectedRace === r
+                          ? 'bg-amber-500/20 border-amber-500 text-amber-300 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]'
+                          : 'bg-slate-900/80 hover:bg-slate-800 border-slate-700/80 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {language === 'ru' ? (RU_RACES[r as CharacterRace] || r) : r}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-[11px] text-slate-400 leading-relaxed italic border-l-2 border-amber-500/30 pl-3">
+                  {language === 'ru' ? RU_RACE_DESC[selectedRace] : RACE_BONUSES[selectedRace].description}
+                </p>
+              </div>
+
+              <div className="bg-slate-950/40 p-4 rounded-2xl border border-slate-700/50">
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-amber-500 mb-3 font-bold drop-shadow-sm">
+                  {language === 'ru' ? 'Класс:' : 'Class:'}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.keys(CLASS_DESCRIPTIONS).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        setSelectedClass(c as CharacterClass);
+                        setBonusStats({ str: 0, sta: 0, agi: 0, dex: 0, int: 0, wis: 0, cha: 0 });
+                        setAvailablePoints(20);
+                      }}
+                      className={`text-[11px] py-2 px-3 rounded-lg font-bold border transition-all truncate text-left shadow-sm ${
+                        selectedClass === c
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]'
+                          : 'bg-slate-900/80 hover:bg-slate-800 border-slate-700/80 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {language === 'ru' ? (RU_CLASSES[c as CharacterClass] || c) : c}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-[11px] text-slate-400 leading-relaxed italic border-l-2 border-emerald-500/30 pl-3">
+                  {language === 'ru' ? RU_CLASS_DESC[selectedClass] : CLASS_DESCRIPTIONS[selectedClass]}
+                </p>
+              </div>
+              
+              <div className="bg-slate-950/40 p-4 rounded-2xl border border-slate-700/50">
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-amber-500 mb-2 font-bold drop-shadow-sm">
+                  {language === 'ru' ? 'Мировоззрение:' : 'Alignment:'}
+                </label>
+                <select
+                  value={selectedDeity}
+                  onChange={(e) => setSelectedDeity(e.target.value)}
+                  className="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-3 py-2 text-slate-200 text-xs font-bold focus:outline-none focus:border-amber-500 cursor-pointer shadow-sm"
+                >
+                  {SYSTEM_DEITIES.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Stats Allocations */}
+            <div className="bg-slate-950/40 rounded-2xl p-5 border border-slate-700/50 shadow-inner">
+              <div className="flex justify-between items-center mb-4 border-b border-slate-700/50 pb-3">
+                <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-200 font-mono drop-shadow-sm">
+                  {language === 'ru' ? 'Характеристики' : 'Attributes'}
+                </h3>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={autoDistributeStats}
+                    className="text-amber-400 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:border-amber-500 px-3 py-1 rounded-lg text-[9px] uppercase font-mono font-bold tracking-widest transition-all cursor-pointer shadow-sm"
+                  >
+                    Auto
+                  </button>
+                  <div className="text-amber-300 text-[11px] font-black font-mono bg-amber-950/50 px-2 py-1 rounded border border-amber-900/50">
+                    Pts: {availablePoints}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 sm:grid-cols-4 gap-3">
+                {(['str', 'sta', 'agi', 'dex', 'int', 'wis', 'cha'] as (keyof CombatStats)[]).map((stat) => (
+                  <div key={stat} className="bg-slate-900/60 border border-slate-700/50 rounded-xl p-2 text-center flex flex-col items-center shadow-sm">
+                    <span className="block text-[9px] uppercase font-mono tracking-widest text-slate-400 font-bold mb-1">
+                      {RU_STATS[stat].split(' ')[0]}
+                    </span>
+                    <div className="text-base font-black text-white my-0.5 flex gap-1 items-baseline">
+                      {getFinalStat(stat)}
+                      {bonusStats[stat] > 0 && (
+                        <span className="text-[10px] text-green-400 font-bold drop-shadow-sm">+{bonusStats[stat]}</span>
+                      )}
+                    </div>
+                    <div className="flex justify-center gap-1.5 w-full mt-2">
+                      <button
+                        type="button"
+                        disabled={bonusStats[stat] === 0}
+                        onClick={() => adjustStat(stat, -1)}
+                        className="flex-1 max-w-[24px] h-5 rounded-md bg-slate-800 text-red-400 font-bold disabled:opacity-30 flex items-center justify-center text-xs hover:bg-slate-700 transition-colors"
+                      >
+                        -
+                      </button>
+                      <button
+                        type="button"
+                        disabled={availablePoints === 0}
+                        onClick={() => adjustStat(stat, 1)}
+                        className="flex-1 max-w-[24px] h-5 rounded-md bg-slate-800 text-green-400 font-bold disabled:opacity-30 flex items-center justify-center text-xs hover:bg-slate-700 transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
-              <p className="mt-3 text-xs bg-slate-950 p-2.5 rounded text-amber-300 italic border border-slate-800 leading-relaxed">
-                {language === 'ru' ? RU_RACE_DESC[selectedRace] : RACE_BONUSES[selectedRace].description}
-              </p>
             </div>
 
-            <div>
-              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-slate-400 mb-2 font-bold">
-                {language === 'ru' ? 'Покровитель / Мировоззрение:' : 'Patron / Alignment:'}
-              </label>
-              <select
-                value={selectedDeity}
-                onChange={(e) => setSelectedDeity(e.target.value)}
-                className="w-full bg-slate-955 border border-slate-700 rounded p-2 text-slate-200 text-sm focus:outline-none focus:border-amber-500 cursor-pointer"
-              >
-                {SYSTEM_DEITIES.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Right Column: Class Selection */}
-          <div className="space-y-6">
-            <div>
-              <label className="block text-xs font-mono font-bold uppercase tracking-wider text-slate-400 mb-2 font-bold">
-                {language === 'ru' ? 'Выберите Класс:' : 'Select Class:'}
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {Object.keys(CLASS_DESCRIPTIONS).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => {
-                      setSelectedClass(c as CharacterClass);
-                      setBonusStats({ str: 0, sta: 0, agi: 0, dex: 0, int: 0, wis: 0, cha: 0 });
-                      setAvailablePoints(20);
-                    }}
-                    className={`text-xs py-2 rounded font-medium border transition-all ${
-                      selectedClass === c
-                        ? 'bg-amber-500 border-amber-400 text-slate-950 font-bold'
-                        : 'bg-slate-955 hover:bg-slate-800 border-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {language === 'ru' ? (RU_CLASSES[c as CharacterClass] || c) : c}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-3 text-xs bg-slate-950 p-2.5 rounded text-amber-300 italic border border-slate-800 leading-relaxed">
-                {language === 'ru' ? RU_CLASS_DESC[selectedClass] : CLASS_DESCRIPTIONS[selectedClass]}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Allocations */}
-        <div className="bg-slate-950 rounded-lg p-5 border border-slate-800">
-          <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-2">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 font-mono">
-                {language === 'ru' ? 'Распределение Характеристик' : 'Attribute Distribution'}
+        {/* Deep Customization UI Elements (UE5 Character Creation Placeholder) */}
+        <div className="bg-slate-950/40 rounded-2xl p-5 border border-slate-700/50 shadow-inner">
+           <div className="flex justify-between items-center mb-4 border-b border-slate-700/50 pb-3">
+              <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-200 font-mono drop-shadow-sm">
+                {language === 'ru' ? 'Скульптинг' : 'Sculpting'}
               </h3>
-              <p className="text-xs text-slate-500">{language === 'ru' ? 'Потратьте стартовые очки для кастомизации атрибутов' : 'Spend starting points to customize your character\'s attributes'}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={autoDistributeStats}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1 rounded text-[10px] uppercase font-mono tracking-wider transition-colors font-bold cursor-pointer"
-              >
-                {language === 'ru' ? 'Авто (По Классу)' : 'Auto (By Class)'}
-              </button>
-              <div className="bg-amber-950 text-amber-300 border border-amber-800/60 rounded px-3 py-1 text-sm font-bold font-mono">
-                {language === 'ru' ? 'Свободные Очки' : 'Points'}: {availablePoints}
+              <div className="text-emerald-400 font-mono text-[9px] px-2 py-1 border border-emerald-900/50 rounded flex items-center gap-1 bg-emerald-950/30">
+                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
+                 GEN-4 EDIT
               </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {(['str', 'sta', 'agi', 'dex', 'int', 'wis', 'cha'] as (keyof CombatStats)[]).map((stat) => (
-              <div key={stat} className="bg-slate-900 border border-slate-800 rounded p-3 text-center">
-                <span className="block text-xs uppercase font-mono tracking-wider text-slate-400 mb-1 font-bold">
-                  {RU_STATS[stat]}
-                </span>
-                <div className="text-xl font-extrabold text-white mt-1 mb-2">
-                  {getFinalStat(stat)}{' '}
-                  {bonusStats[stat] > 0 && (
-                    <span className="text-xs text-green-400 font-bold ml-1">+{bonusStats[stat]}</span>
-                  )}
-                </div>
-                <div className="flex justify-center gap-2 mt-1">
-                  <button
-                    type="button"
-                    disabled={bonusStats[stat] === 0}
-                    onClick={() => adjustStat(stat, -1)}
-                    className="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-red-400 font-bold border border-slate-700 disabled:opacity-30 disabled:pointer-events-none text-sm cursor-pointer"
-                  >
-                    -
-                  </button>
-                  <button
-                    type="button"
-                    disabled={availablePoints === 0}
-                    onClick={() => adjustStat(stat, 1)}
-                    className="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-green-400 font-bold border border-slate-700 disabled:opacity-30 disabled:pointer-events-none text-sm cursor-pointer"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+           </div>
+           
+           <div className="space-y-4">
+                 <div>
+                    <label className="flex justify-between text-[9px] text-slate-400 mb-2 font-mono uppercase tracking-widest font-bold">
+                       <span>{language === 'ru' ? 'Челюсть (Ширина)' : 'Jaw (Width)'}</span>
+                    </label>
+                    <input type="range" className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500 shadow-inner" defaultValue="45" />
+                 </div>
+                 <div>
+                    <label className="flex justify-between text-[9px] text-slate-400 mb-2 font-mono uppercase tracking-widest font-bold">
+                       <span>{language === 'ru' ? 'Скулы (Высота)' : 'Cheekbones'}</span>
+                    </label>
+                    <input type="range" className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500 shadow-inner" defaultValue="72" />
+                 </div>
+                 <div>
+                    <label className="flex justify-between text-[9px] text-slate-400 mb-2 font-mono uppercase tracking-widest font-bold">
+                       <span>{language === 'ru' ? 'Глаза (Посадка)' : 'Eyes (Depth)'}</span>
+                    </label>
+                    <input type="range" className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500 shadow-inner" defaultValue="30" />
+                 </div>
+                 <div className="pt-2">
+                    <label className="flex justify-between text-[9px] text-slate-400 mb-2 font-mono uppercase tracking-widest font-bold">
+                       <span>{language === 'ru' ? 'Детализация кожи (PBR)' : 'Skin Details'}</span>
+                    </label>
+                    <input type="range" className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500 shadow-inner" defaultValue="90" />
+                 </div>
+           </div>
         </div>
 
         {/* Finalize Button */}
-        <div className="pt-4 flex justify-end">
+        <div className="pt-4 pb-8">
             <button
             type="submit"
             disabled={!name.trim()}
-            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-8 py-4 rounded text-base uppercase tracking-wider shadow-lg shadow-amber-500/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-black px-4 py-4 rounded-xl text-base uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.4)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            {language === 'ru' ? 'Создать Героя и Войти в Мир' : 'Create Hero and Enter World'}
+            {language === 'ru' ? 'Оживить Героя' : 'Awaken Hero'}
           </button>
         </div>
       </form>
-    </div>
+        </div>
+      </div>
     </div>
   );
 }

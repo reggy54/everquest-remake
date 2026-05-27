@@ -6,14 +6,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PlayerCharacter, Zone, Item, Spell, ChatMessage, SlotType } from './types';
 import CharacterCreator from './components/CharacterCreator';
+import OnboardingCinematic from './components/OnboardingCinematic';
 import Combat2DArena from './components/Combat2DArena';
 import MapExplorer2D, { MapEntity } from './components/MapExplorer2D';
 import CosmeticSalonTransmog from './components/CosmeticSalonTransmog';
+import CompanionsCamp, { COMPANIONS_DB } from './components/CompanionsCamp';
 import PvPArena from './components/PvPArena';
 import GatheringCraftingEngine from './components/GatheringCraftingEngine';
+import EquipmentEnhancement from './components/EquipmentEnhancement';
+import EquipmentReforge from './components/EquipmentReforge';
+import EquipmentSalvage from './components/EquipmentSalvage';
+import EquipmentSockets from './components/EquipmentSockets';
 import PetsAndHousing from './components/PetsAndHousing';
 import DungeonFinderInstance from './components/DungeonFinderInstance';
+import ProgressionTalentsFates from './components/ProgressionTalentsFates';
 import CompanionRPDialog from './components/CompanionRPDialog';
+import Character3DModel from './components/Character3DModel';
+import WorldMap from './components/WorldMap';
+import WorldEventsCalendar from './components/WorldEventsCalendar';
+import DynamicQuests from './components/DynamicQuests';
+import AdminPanel from './components/AdminPanel';
 import {
   GAME_ZONES,
   WORLD_SPELLS,
@@ -25,6 +37,7 @@ import {
   Sparkles,
   BookOpen,
   Sword,
+  Swords,
   ShoppingCart,
   MapPin,
   MessageSquare,
@@ -51,41 +64,51 @@ import {
   Hammer,
   Flame,
   Wrench,
-  Award
+  Award,
+  CloudRain,
+  Calendar,
+  GraduationCap,
+  Star,
+  BrainCircuit,
+  ArrowUpCircle,
+  Trash2,
+  Hexagon,
+  HeartHandshake
 } from 'lucide-react';
 
 const GuildCreationForm = ({ onCreate, playerGold }: { onCreate: (name: string, tag: string) => void, playerGold: number }) => {
   const [name, setName] = useState('');
   const [tag, setTag] = useState('');
   return (
-    <div className="space-y-3 bg-slate-950/40 p-4 border border-slate-800 rounded-lg">
+    <div className="space-y-4 bg-slate-900/60 p-6 border border-slate-700/50 rounded-xl shadow-inner relative overflow-hidden backdrop-blur-sm">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-[40px] pointer-events-none" />
       <div>
-        <label className="block text-[10px] text-slate-400 font-mono uppercase font-bold mb-1">Название:</label>
+        <label className="block text-[10px] text-slate-400 font-mono uppercase font-bold tracking-widest mb-2 drop-shadow-sm">Название:</label>
         <input
           type="text"
           value={name}
           maxLength={24}
           onChange={(e) => setName(e.target.value)}
           placeholder="Например: Хранители Norrath"
-          className="w-full bg-slate-900 border border-slate-705 text-xs px-3 py-2 rounded focus:outline-none focus:border-amber-500"
+          className="w-full bg-slate-950/80 border border-slate-700/80 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 shadow-inner transition-all text-white font-medium"
         />
       </div>
       <div>
-        <label className="block text-[10px] text-slate-400 font-mono uppercase font-bold mb-1">Тэг (3-4 символа):</label>
+        <label className="block text-[10px] text-slate-400 font-mono uppercase font-bold tracking-widest mb-2 drop-shadow-sm">Тэг (3-4 символа):</label>
         <input
           type="text"
           value={tag}
           maxLength={4}
           onChange={(e) => setTag(e.target.value.replace(/[^a-zA-Z]/g, ''))}
           placeholder="EQ3"
-          className="w-full bg-slate-900 border border-slate-705 text-xs px-3 py-2 rounded focus:outline-none focus:border-amber-500 font-mono uppercase"
+          className="w-full bg-slate-950/80 border border-slate-700/80 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 font-mono uppercase font-black text-amber-100 shadow-inner transition-all placeholder:text-slate-600"
         />
       </div>
       <button
         type="button"
         onClick={() => onCreate(name, tag)}
         disabled={name.trim().length === 0 || tag.trim().length < 2 || playerGold < 30}
-        className="w-full mt-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-black py-2 rounded text-xs uppercase cursor-pointer"
+        className="w-full mt-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black py-4 rounded-xl text-xs uppercase tracking-widest cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all hover:scale-[1.02] active:scale-[0.98]"
       >
         Основать (30 Золота)
       </button>
@@ -98,31 +121,61 @@ const GuildMotdSection = ({ currentMotd, onUpdate }: { currentMotd: string, onUp
   const [val, setVal] = useState(currentMotd);
   if (editing) {
     return (
-      <div className="space-y-2 mt-2">
+      <div className="space-y-3 mt-4">
         <textarea
           value={val}
           onChange={(e) => setVal(e.target.value)}
-          className="w-full bg-slate-900 border border-slate-705 text-xs p-2 rounded focus:outline-none focus:border-amber-500 text-slate-205 mt-1.5 font-mono"
+          className="w-full bg-slate-950/80 border border-slate-700/80 text-sm p-3 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-slate-200 mt-2 font-mono shadow-inner transition-colors"
           rows={2}
         />
-        <div className="flex justify-end gap-2 text-[10px]">
-          <button type="button" onClick={() => setEditing(false)} className="text-slate-400 hover:text-white">Отмена</button>
-          <button type="button" onClick={() => { onUpdate(val); setEditing(false); }} className="text-amber-500 hover:text-amber-400 font-bold">Сохранить</button>
+        <div className="flex justify-end gap-3 text-[11px] font-mono uppercase tracking-widest font-bold">
+          <button type="button" onClick={() => setEditing(false)} className="text-slate-500 hover:text-slate-300 transition-colors">Отмена</button>
+          <button type="button" onClick={() => { onUpdate(val); setEditing(false); }} className="text-amber-500 hover:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/30 transition-all">Сохранить</button>
         </div>
       </div>
     );
   }
   return (
-    <div className="bg-slate-905 p-2.5 rounded border border-slate-800/45 text-[11px] leading-relaxed italic text-amber-100 relative">
-      <span className="text-[9px] text-slate-500 uppercase font-bold block not-italic">Сообщение дня:</span>
+    <div className="bg-slate-900/60 p-4 rounded-xl border border-amber-500/20 shadow-inner text-sm leading-relaxed italic text-amber-100/90 relative group">
+      <span className="text-[10px] text-amber-500/60 uppercase font-black tracking-widest block not-italic mb-1">Сообщение дня:</span>
       «{currentMotd}»
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="absolute top-1.5 right-2 text-[10px] text-amber-500/80 hover:text-amber-400 font-mono"
+        className="absolute top-3 right-3 text-[10px] text-amber-500/40 hover:text-amber-400 font-mono opacity-0 group-hover:opacity-100 transition-all font-bold uppercase tracking-widest"
       >
         [Изм]
       </button>
+    </div>
+  );
+};
+
+const AuthErrorModal = ({ message, onTryAgain }: { message: string; onTryAgain: () => void }) => {
+  if (!message) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+      <div className="bg-slate-900 border border-rose-900/60 rounded-xl max-w-sm w-full p-6 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-bl-full pointer-events-none" />
+        <div className="flex flex-col items-center text-center space-y-4 relative z-10">
+          <div className="bg-rose-950/80 p-3 rounded-full border border-rose-800 shrink-0">
+            <AlertCircle className="h-8 w-8 text-rose-500" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-white mb-2 font-serif">Ошибка авторизации</h3>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              {message}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onTryAgain}
+            className="w-full mt-2 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-lg transition-colors border border-slate-700 flex items-center justify-center gap-2 uppercase tracking-wide text-xs cursor-pointer"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Попробовать снова
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -133,6 +186,14 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: st
   const [password, setPassword] = useState('');
   const [errorVal, setErrorVal] = useState('');
   const [loading, setLoading] = useState(false);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
+
+  const handleTryAgain = () => {
+    setErrorVal('');
+    setTimeout(() => {
+      usernameInputRef.current?.focus();
+    }, 10);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,6 +212,10 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: st
         body: JSON.stringify({ username: username.trim(), password })
       });
 
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Не удалось подключиться к серверу логина (неверный формат ответа).');
+      }
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Произошла ошибка при аутентификации.');
@@ -193,10 +258,7 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: st
         </div>
 
         {errorVal && (
-          <div className="bg-rose-950/60 border border-rose-800 text-rose-200 text-xs py-2 px-3 rounded-lg mb-5 flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
-            <span>{errorVal}</span>
-          </div>
+          <AuthErrorModal message={errorVal} onTryAgain={handleTryAgain} />
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -205,6 +267,7 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: st
               Имя Персонажа / Логин
             </label>
             <input
+              ref={usernameInputRef}
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -284,52 +347,62 @@ export default function App() {
 
   const [characters, setCharacters] = useState<PlayerCharacter[]>([]);
   const [isCreatingCharacter, setIsCreatingCharacter] = useState(false);
+  const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
   const [character, setCharacter] = useState<PlayerCharacter | null>(null);
-  const [selectedTab, setSelectedTab] = useState<'zones' | 'merchant' | 'lore' | 'quests' | 'character' | 'chat' | 'guild-party' | 'admin' | 'dungeons' | 'pets-housing' | 'crafting-market'>('zones');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<'zones' | 'merchant' | 'lore' | 'quests' | 'character' | 'chat' | 'guild-party' | 'admin' | 'dungeons' | 'pets-housing' | 'crafting-market' | 'worldmap' | 'events' | 'progression' | 'companions' | 'arena'>('worldmap');
   const [activeZone, setActiveZone] = useState<Zone>(GAME_ZONES[0]);
   const [showServerPanel, setShowServerPanel] = useState(false);
 
   const [merchantFilterRarity, setMerchantFilterRarity] = useState<string>('all');
   const [merchantFilterClass, setMerchantFilterClass] = useState<string>('all');
-  const [questSubTab, setQuestSubTab] = useState<'msq' | 'side'>('msq');
+  const [questSubTab, setQuestSubTab] = useState<'msq' | 'side' | 'ai'>('msq');
 
   const [language, setLanguage] = useState<'ru'|'en'>('ru');
   const dic = {
     'ru': {
       'logout': 'Выйти из мира',
+      'worldmap': 'Карта мира',
       'zones': 'Локации',
       'merchant': 'Туннель',
       'character': 'Снаряжение',
       'guild-party': 'Гильдия/Группа',
       'chat': 'Чат',
       'dungeons': 'Рейды',
+      'progression': 'Судьба / Таланты',
       'lore': 'Сказания',
       'craft-market': 'Крафт',
       'pets-housing': 'Дом/Звери',
       'quests': 'Квесты',
+      'events': 'События',
       'simulatedServerInfo': 'Симулируемый MMO сервер • В сети',
       'selectChar': 'Выбор Героя',
       'createChar': 'Создать Героя',
       'charDeleted': 'удален навсегда',
-      'charDeleteWarn': 'Вы уверены, что хотите удалить персонажа'
+      'charDeleteWarn': 'Вы уверены, что хотите удалить персонажа',
+      'arena': 'Арена'
     },
     'en': {
       'logout': 'Log Out',
+      'worldmap': 'World Map',
       'zones': 'Zones',
       'merchant': 'Shop',
       'character': 'Character',
       'guild-party': 'Guild/Group',
       'chat': 'Chat',
       'dungeons': 'Raids',
+      'progression': 'Fates / Talents',
       'lore': 'Lore',
       'craft-market': 'Crafting',
       'pets-housing': 'Housing/Pets',
       'quests': 'Quests',
+      'events': 'Events',
       'simulatedServerInfo': 'Simulated MMO Server • Online',
       'selectChar': 'Select Character',
       'createChar': 'Create Character',
       'charDeleted': 'permanently deleted',
-      'charDeleteWarn': 'Are you sure you want to delete character'
+      'charDeleteWarn': 'Are you sure you want to delete character',
+      'arena': 'Arena'
     }
   };
   const t = (key: keyof typeof dic['ru']) => dic[language][key] || key;
@@ -349,11 +422,16 @@ export default function App() {
     try {
       const res = await fetch('/api/server-settings');
       if (res.ok) {
-        const data = await res.json();
-        setServerStateSettings(data);
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          setServerStateSettings(data);
+        }
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      if (!e.message?.includes('Failed to fetch')) {
+        console.error(e);
+      }
     }
   };
 
@@ -369,11 +447,16 @@ export default function App() {
         try {
           const res = await fetch('/api/admin/users');
           if (res.ok) {
-            const data = await res.json();
-            setAdminUsers(data.users || []);
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const data = await res.json();
+              setAdminUsers(data.users || []);
+            }
           }
-        } catch (e) {
-          console.error(e);
+        } catch (e: any) {
+          if (!e.message?.includes('Failed to fetch')) {
+            console.error(e);
+          }
         }
       };
       loadUsers();
@@ -406,14 +489,15 @@ export default function App() {
   const [chatChannel, setChatChannel] = useState<'OOC' | 'Auction' | 'Guild' | 'Shout'>('OOC');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isSendingChat, setIsSendingChat] = useState(false);
+  const [isChatVisible, setIsChatVisible] = useState(true);
   
   // Lore states
   const [loreSearch, setLoreSearch] = useState('');
   const [loreLoading, setLoreLoading] = useState(false);
   const [loreTopic, setLoreTopic] = useState<string>('Fippy Darkpaw');
   const [loreResponse, setLoreResponse] = useState<{ title: string; text: string } | null>({
-    title: 'The Prophecy of Eternia',
-    text: 'Этерния эволюционировала. Древний Авалон, Кибер-мегаполисы и подводные города Лемурии открыли свои порталы. Десятки тысяч игроков объединяются в гильдии, чтобы контролировать территории и возводить неприступные замки. Новые континенты появляются на горизонте, когда магические шпили пронзают ткань миров и открывают путь к новым, неисследованным землям и космическим мирам Эфирных Рубежей. Выживут только те сообщества, которые научатся управлять сложной экономикой и собирать рейды вглубь неизведанного...'
+    title: 'The Prophecy of Eteria',
+    text: 'Этерия: Разорванный Горизонт. Древние континенты и подводные города открыли свои порталы. Десятки тысяч игроков объединяются в гильдии, чтобы контролировать территории и возводить неприступные замки. Новые континенты появляются на горизонте, когда магические шпили пронзают ткань миров и открывают путь к новым, неисследованным землям и космическим мирам Эфирных Рубежей. Выживут только те сообщества, которые научатся управлять сложной экономикой и собирать рейды вглубь неизведанного...'
   });
 
   // Dynamic quest generator
@@ -445,6 +529,7 @@ export default function App() {
 
   // Expanded Guild Features: PvE, PvP and Economy State Managers
   const [guildSubTab, setGuildSubTab] = useState<'management' | 'pve' | 'pvp' | 'craft'>('management');
+  const [craftSubTab, setCraftSubTab] = useState<'craft' | 'enhance' | 'reforge' | 'sockets' | 'salvage'>('craft');
 
   const [guildUpgrades, setGuildUpgrades] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem('eq3_guild_upgrades');
@@ -540,13 +625,19 @@ export default function App() {
         skinType: 'Светлая',
         transmogs: {
           head: null,
+          shoulders: null,
           chest: null,
-          arms: null,
-          legs: null,
           hands: null,
+          waist: null,
+          legs: null,
           feet: null,
+          cloak: null,
+          amulet: null,
+          ring1: null,
+          ring2: null,
           primary: null,
-          secondary: null
+          secondary: null,
+          fateFocus: null
         },
         title: 'Скиталец'
       };
@@ -650,6 +741,23 @@ export default function App() {
     }, 4000);
   };
 
+  const notifyPlayerImpact = async (actionType: string, details: string) => {
+    if (!character) return;
+    try {
+      await fetch('/api/gemini/player-impact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerName: character.name,
+          actionType,
+          details
+        })
+      });
+    } catch (e) {
+      console.error('Failed to notify AI of player impact:', e);
+    }
+  };
+
   const createGuild = (name: string, tag: string) => {
     if (!character) return;
     if (character.gold < 30) {
@@ -672,6 +780,8 @@ export default function App() {
     setGuild(newGuild);
     localStorage.setItem('eq3_guild', JSON.stringify(newGuild));
     
+    notifyPlayerImpact('Создание гильдии', `Основал могущественную гильдию "${name}" [${tag}]`);
+
     // Deduct cost
     const updatedChar = { ...character, gold: character.gold - 30 };
     setCharacter(updatedChar);
@@ -900,13 +1010,18 @@ export default function App() {
       try {
         const res = await fetch('/api/chat');
         if (res.ok) {
-          const data = await res.json();
-          if (data.messages) {
-            setChatMessages(data.messages);
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await res.json();
+            if (data.messages) {
+              setChatMessages(data.messages);
+            }
           }
         }
-      } catch (err) {
-        console.error('Error fetching chat messages:', err);
+      } catch (err: any) {
+        if (!err.message?.includes('Failed to fetch')) {
+          console.error('Error fetching chat messages:', err);
+        }
       }
     };
 
@@ -1199,10 +1314,9 @@ export default function App() {
                       {
                         id: `bot-chat-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                         sender: entity.name,
-                        channel: 'OOC',
+                        channel: 'OOC' as const,
                         text: line,
-                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        class: entity.class as any
+                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                       }
                     ].slice(-40));
                   }
@@ -1236,6 +1350,10 @@ export default function App() {
     if (portal && portal.targetZoneId) {
       const targetZ = GAME_ZONES.find(z => z.id === portal.targetZoneId);
       if (targetZ) {
+        if (character.level < targetZ.minLevel) {
+           triggerAlert(`Недостаточный уровень для прохода в ${targetZ.name}. Требуется ${targetZ.minLevel}.`, 'error');
+           return;
+        }
         setActiveZone(targetZ);
         setLoreTopic(targetZ.name);
         triggerAlert(`Перемещаемся в соседнюю локацию: ${targetZ.name}!`, 'info');
@@ -1279,6 +1397,10 @@ export default function App() {
 
       saveCharacter(updatedChar);
       triggerAlert(`Открыт сундук! Найдено ${earnedGold} золота и получено ${earnedExp} опыта!${leveledUp ? ' Новый Уровень!' : ''}`, 'success');
+      
+      if (leveledUp) {
+        notifyPlayerImpact("Достижение нового уровня", `Поднял персонажа до уровня ${updatedLevel} после того, как нашел спрятанный сундук в локации ${activeZone.name}.`);
+      }
       return;
     }
 
@@ -1324,16 +1446,16 @@ export default function App() {
   // Spell unlocks: filter spells suitable for current level & class
   const getAvailableClassSpells = () => {
     if (!character) return [];
-    const isSpellcaster = ['Cleric', 'Druid', 'Shaman', 'Necromancer', 'Wizard', 'Magician', 'Enchanter', 'Paladin', 'Shadow Knight'].includes(character.class);
+    const isSpellcaster = ['Priest', 'Shaman', 'Mage', 'Summoner', 'Paladin'].includes(character.class);
     if (!isSpellcaster) return [];
 
     return WORLD_SPELLS.filter(spell => {
-      // Clerics/Paladins get healing & buffs
-      if (['Cleric', 'Paladin'].includes(character.class) && (spell.type === 'heal' || spell.id === 'shield')) return true;
-      // Wizards get high damage
-      if (character.class === 'Wizard' && spell.type === 'damage') return true;
-      // Enchanters get Clarity + Mez
-      if (character.class === 'Enchanter' && ['clarity', 'mesmerize', 'shield'].includes(spell.id)) return true;
+      // Priests/Paladins get healing & buffs
+      if (['Priest', 'Paladin', 'Shaman'].includes(character.class) && (spell.type === 'heal' || spell.id === 'shield')) return true;
+      // Mages get high damage
+      if (character.class === 'Mage' && spell.type === 'damage') return true;
+      // Summoner gets Clarity + Mez
+      if (character.class === 'Summoner' && ['clarity', 'mesmerize', 'shield'].includes(spell.id)) return true;
       // Others get primary firebolt/heal based on level
       if (spell.level <= character.level) return true;
       return false;
@@ -1346,7 +1468,7 @@ export default function App() {
   const handleCharacterCreated = (newChar: PlayerCharacter) => {
     saveCharacter(newChar);
     setIsCreatingCharacter(false);
-    triggerAlert(`Добро пожаловать в Этернию, ${newChar.name}! Ваша судьба ждет вас!`, 'success');
+    setShowOnboarding(true);
   };
 
   const handleLogoutToSelect = () => {
@@ -1359,14 +1481,23 @@ export default function App() {
 
   const handleDeleteCharacter = (name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm(`${t('charDeleteWarn')} ${name}?`)) {
-      setCharacters(prev => {
-        const remaining = prev.filter(c => c.name !== name);
-        localStorage.setItem('eq3_characters', JSON.stringify(remaining));
-        return remaining;
-      });
-      triggerAlert(`${name} ${t('charDeleted')}.`, 'info');
-    }
+    setCharacterToDelete(name);
+  };
+
+  const confirmDeleteCharacter = (name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCharacters(prev => {
+      const remaining = prev.filter(c => c.name !== name);
+      localStorage.setItem('eq3_characters', JSON.stringify(remaining));
+      return remaining;
+    });
+    setCharacterToDelete(null);
+    triggerAlert(`${name} ${t('charDeleted')}.`, 'info');
+  };
+
+  const cancelDeleteCharacter = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCharacterToDelete(null);
   };
 
   const handleSendChat = async (e: React.FormEvent) => {
@@ -1394,9 +1525,12 @@ export default function App() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.currentMessages) {
-          setChatMessages(data.currentMessages);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          if (data.currentMessages) {
+            setChatMessages(data.currentMessages);
+          }
         }
       }
     } catch (err) {
@@ -1461,6 +1595,16 @@ export default function App() {
     } finally {
       setQuestLoading(false);
     }
+  };
+
+  const handleAcceptDynamicQuest = (quest: any) => {
+    if (!character) return;
+    const updatedQuests = [...character.quests, quest];
+    saveCharacter({
+      ...character,
+      quests: updatedQuests,
+    });
+    triggerAlert(`Принято задание ИИ-Режиссёра: "${quest.title}"! Проверьте вкладку "Побочные".`, 'success');
   };
 
   const handleAbandonQuest = (questId: string) => {
@@ -1566,11 +1710,17 @@ export default function App() {
       primary: 'Главная рука',
       chest: 'Грудь',
       head: 'Шлем',
+      shoulders: 'Плечи',
       hands: 'Перчатки',
+      waist: 'Пояс',
       feet: 'Сапоги',
       secondary: 'Вторая рука',
-      arms: 'Наручи',
-      legs: 'Поножи'
+      legs: 'Поножи',
+      cloak: 'Плащ',
+      amulet: 'Амулет',
+      ring1: 'Кольцо 1',
+      ring2: 'Кольцо 2',
+      fateFocus: 'Осколочный Фокус'
     };
     triggerAlert(`Надето [${item.name}] в слот "${slotNamesEnRu[slot] || slot}"!`, 'success');
   };
@@ -1631,19 +1781,33 @@ export default function App() {
           maxHp: m.maxHp,
         }));
     } else {
-      const potentialMates = COMMON_TEMPLATES.simulatedNames.filter(n => n !== character.name);
-      const matchCount = activeZone.difficulty === 'Raid' ? 4 : activeZone.difficulty === 'Hard' ? 2 : 1;
-      const partyMatesClasses = ['Cleric', 'Monk', 'Wizard', 'Enchanter', 'Bard'];
-      
-      for (let i = 0; i < matchCount; i++) {
-        const pName = potentialMates[Math.floor(Math.random() * potentialMates.length)];
-        const pClass = partyMatesClasses[Math.floor(Math.random() * partyMatesClasses.length)];
-        structuredParty.push({
-          name: pName,
-          class: pClass as any,
-          hp: 75 + character.level * 40,
-          maxHp: 75 + character.level * 40,
-        });
+      if (character.activeCompanion) {
+         // Companion joins!
+         const compDef = COMPANIONS_DB.find((c: any) => c.id === character.activeCompanion);
+         if (compDef) {
+           structuredParty.push({
+             name: compDef.name,
+             class: compDef.charClass,
+             hp: 75 + character.level * 45,
+             maxHp: 75 + character.level * 45,
+           });
+         }
+      } else {
+        // Fallback to random bots
+        const potentialMates = COMMON_TEMPLATES.simulatedNames.filter(n => n !== character.name);
+        const matchCount = activeZone.difficulty === 'Raid' ? 4 : activeZone.difficulty === 'Hard' ? 2 : 1;
+        const partyMatesClasses = ['Priest', 'Rogue', 'Mage', 'Summoner', 'Shaman'];
+        
+        for (let i = 0; i < matchCount; i++) {
+          const pName = potentialMates[Math.floor(Math.random() * potentialMates.length)];
+          const pClass = partyMatesClasses[Math.floor(Math.random() * partyMatesClasses.length)];
+          structuredParty.push({
+            name: pName,
+            class: pClass as any,
+            hp: 75 + character.level * 40,
+            maxHp: 75 + character.level * 40,
+          });
+        }
       }
     }
 
@@ -1660,7 +1824,7 @@ export default function App() {
     // Setup initial companion party buffs depending on who is in the party
     const initialBuffs: { id: string; name: string; provider: string; effect: string; duration: number }[] = [];
     structuredParty.forEach(member => {
-      if (member.class === 'Cleric') {
+      if (member.class === 'Priest') {
         initialBuffs.push({
           id: `buff-cleric-init-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           name: 'Heroism',
@@ -1668,7 +1832,7 @@ export default function App() {
           effect: '+15 Max HP & AC',
           duration: 5,
         });
-      } else if (member.class === 'Bard') {
+      } else if (member.class === 'Shaman') {
         initialBuffs.push({
           id: `buff-bard-init-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           name: 'Song of Clarity',
@@ -1676,7 +1840,7 @@ export default function App() {
           effect: '+6 Mana regeneration per round',
           duration: 6,
         });
-      } else if (member.class === 'Enchanter') {
+      } else if (member.class === 'Summoner') {
         initialBuffs.push({
           id: `buff-enchanter-init-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           name: 'Clarity I',
@@ -1864,11 +2028,11 @@ export default function App() {
         const roleRoll = Math.random();
         if (member.hp <= 0) return member;
 
-        if (member.class === 'Cleric') {
+        if (member.class === 'Priest') {
           if (roleRoll > 0.6) {
             const cure = 30 + Math.floor(Math.random() * 20);
             character.hp = Math.min(character.maxHp, character.hp + cure);
-            logChunk.push(`[PARTY] ${member.name} (Cleric) casts Heal on you! Restored ${cure} HP.`);
+            logChunk.push(`[PARTY] ${member.name} (Priest) casts Heal on you! Restored ${cure} HP.`);
           } else if (roleRoll > 0.3) {
             const hasShield = updatedBuffs.some(b => b.name === 'Aegis of Faith');
             if (!hasShield) {
@@ -1879,7 +2043,7 @@ export default function App() {
                 effect: '+15 Armor Class & Divine Shielding',
                 duration: 4
               });
-              logChunk.push(`[PARTY] ${member.name} (Cleric) casts [Aegis of Faith] on the group!`);
+              logChunk.push(`[PARTY] ${member.name} (Priest) casts [Aegis of Faith] on the group!`);
             } else {
               const punch = 10 + Math.floor(Math.random() * 10);
               activeMonsterHp = Math.max(0, activeMonsterHp - punch);
@@ -1890,11 +2054,11 @@ export default function App() {
             activeMonsterHp = Math.max(0, activeMonsterHp - punch);
             logChunk.push(`[PARTY] ${member.name} strikes ${combatMonster.name} for ${punch} damage.`);
           }
-        } else if (member.class === 'Wizard' && roleRoll > 0.3) {
+        } else if (member.class === 'Mage' && roleRoll > 0.3) {
           const splDmg = 40 + Math.floor(Math.random() * 25);
           activeMonsterHp = Math.max(0, activeMonsterHp - splDmg);
-          logChunk.push(`[PARTY] ${member.name} (Wizard) launches a glowing ice blast at ${combatMonster.name} that deals ${splDmg} frost damage!`);
-        } else if (member.class === 'Enchanter') {
+          logChunk.push(`[PARTY] ${member.name} (Mage) launches a glowing ice blast at ${combatMonster.name} that deals ${splDmg} frost damage!`);
+        } else if (member.class === 'Summoner') {
           if (roleRoll > 0.5) {
             const hasClarity = updatedBuffs.some(b => b.name === 'Clarity I');
             if (!hasClarity) {
@@ -1905,11 +2069,11 @@ export default function App() {
                 effect: '+10 Mana regeneration per round',
                 duration: 5
               });
-              logChunk.push(`[PARTY] ${member.name} (Enchanter) casts [Clarity I] on you!`);
+              logChunk.push(`[PARTY] ${member.name} (Summoner) casts [Clarity I] on you!`);
             } else {
               const splDmg = 25 + Math.floor(Math.random() * 15);
               activeMonsterHp = Math.max(0, activeMonsterHp - splDmg);
-              logChunk.push(`[PARTY] ${member.name} (Enchanter) casts Mind Strike on ${combatMonster.name} for ${splDmg} psychic damage!`);
+              logChunk.push(`[PARTY] ${member.name} (Summoner) casts Mind Strike on ${combatMonster.name} for ${splDmg} psychic damage!`);
             }
           } else {
             const hasAlac = updatedBuffs.some(b => b.name === 'Alacrity');
@@ -1921,14 +2085,14 @@ export default function App() {
                 effect: '+15% Speed (Double strike possibility)',
                 duration: 3
               });
-              logChunk.push(`[PARTY] ${member.name} (Enchanter) casts [Alacrity] on the team!`);
+              logChunk.push(`[PARTY] ${member.name} (Summoner) casts [Alacrity] on the team!`);
             } else {
               const splDmg = 20 + Math.floor(Math.random() * 10);
               activeMonsterHp = Math.max(0, activeMonsterHp - splDmg);
-              logChunk.push(`[PARTY] ${member.name} (Enchanter) strikes ${combatMonster.name} for ${splDmg} psychic damage.`);
+              logChunk.push(`[PARTY] ${member.name} (Summoner) strikes ${combatMonster.name} for ${splDmg} psychic damage.`);
             }
           }
-        } else if (member.class === 'Bard') {
+        } else if (member.class === 'Shaman') {
           if (roleRoll > 0.5) {
             const hasSong = updatedBuffs.some(b => b.name === 'Hymn of Valor');
             if (!hasSong) {
@@ -1939,11 +2103,11 @@ export default function App() {
                 effect: 'Attack power boosted (+5 Damage)',
                 duration: 4
               });
-              logChunk.push(`[PARTY] ${member.name} (Bard) plays [Hymn of Valor] on his lute! Your weapons hum.`);
+              logChunk.push(`[PARTY] ${member.name} (Shaman) yells a warcry! Your weapons hum.`);
             } else {
               const punch = 12 + Math.floor(Math.random() * 8);
               activeMonsterHp = Math.max(0, activeMonsterHp - punch);
-              logChunk.push(`[PARTY] ${member.name} (Bard) punches ${combatMonster.name} for ${punch} physical damage.`);
+              logChunk.push(`[PARTY] ${member.name} (Shaman) hits ${combatMonster.name} for ${punch} physical damage.`);
             }
           } else {
             const hasChorus = updatedBuffs.some(b => b.name === 'Chorus of Replenishment');
@@ -1955,17 +2119,17 @@ export default function App() {
                 effect: '+6 HP & +3 Mana regeneration per round',
                 duration: 4
               });
-              logChunk.push(`[PARTY] ${member.name} (Bard) plays [Chorus of Replenishment] granting health and mana recovery!`);
+              logChunk.push(`[PARTY] ${member.name} (Shaman) casts Healing Rain granting health and mana recovery!`);
             } else {
               const punch = 10 + Math.floor(Math.random() * 8);
               activeMonsterHp = Math.max(0, activeMonsterHp - punch);
               logChunk.push(`[PARTY] ${member.name} strikes ${combatMonster.name} for ${punch} damage.`);
             }
           }
-        } else if (member.class === 'Monk') {
+        } else if (member.class === 'Rogue') {
           const punch = 20 + Math.floor(Math.random() * 15);
           activeMonsterHp = Math.max(0, activeMonsterHp - punch);
-          logChunk.push(`[PARTY] ${member.name} (Monk) executes a flying double-kick at ${combatMonster.name} for ${punch} damage!`);
+          logChunk.push(`[PARTY] ${member.name} (Rogue) executes a shadow strike at ${combatMonster.name} for ${punch} damage!`);
         } else {
           // General strike
           const hit = 10 + Math.floor(Math.random() * 10);
@@ -2183,8 +2347,12 @@ export default function App() {
     setCombatOver(true);
     if (leveledUp) {
       triggerAlert(`ПОЗДРАВЛЯЕМ! Вы получили уровень ${level}! (Ding!)`, 'success');
+      notifyPlayerImpact("Сражение и прокачка", `В бою убил монстра ${monster.name} и достиг нового уровня ${level}!`);
     } else {
       triggerAlert(`Победа! Монстр ${monster.name} повержен. Получено ${baseExp} XP!`, 'success');
+      if (monster.level >= character.level + 2) {
+        notifyPlayerImpact("Эпическая победа", `Смог одолеть опасного противника "${monster.name}" уровня ${monster.level}, рискуя своей жизнью!`);
+      }
     }
   };
 
@@ -2201,6 +2369,8 @@ export default function App() {
       mana: character.maxMana,
       exp: finalExp,
     });
+    
+    notifyPlayerImpact("Смерть в бою", `Подавал большие надежды, но был побежден монстром по имени ${combatMonster?.name} и потерял часть души (опыт).`);
 
     setCombatLogs((prev) => [
       ...prev,
@@ -2249,6 +2419,8 @@ export default function App() {
     });
 
     triggerAlert(`Задание "${targetQuest.title}" завершено! Получено +${goldReward} золота и ${expReward} опыта.`, 'success');
+    
+    notifyPlayerImpact("Выполнение квеста", `Успешно завершил задание "${targetQuest.title}". ${leveledUp ? `К тому же, это позволило достичь нового уровня (${level})!` : ''}`);
   };
 
   // 8. View Renderers
@@ -2276,7 +2448,7 @@ export default function App() {
           <div className="text-center space-y-2 mb-8">
             <h1 className="text-3xl font-serif text-amber-500 font-bold uppercase tracking-widest text-shadow">{t('selectChar')}</h1>
             <p className="text-slate-400 font-mono text-sm max-w-lg mx-auto leading-relaxed">
-              {language === 'ru' ? 'Выберите героя для погружения в бесшовный мир Этернии или создайте нового легендарного искателя приключений.' : 'Choose a hero to dive into the seamless world of Eternia, or create a new legendary adventurer.'}
+              {language === 'ru' ? 'Выберите героя для погружения в мир Этерии или создайте нового легендарного искателя приключений.' : 'Choose a hero to dive into the seamless world of Eteria, or create a new legendary adventurer.'}
             </p>
           </div>
           
@@ -2284,20 +2456,41 @@ export default function App() {
             {characters.map(c => (
               <div 
                 key={c.name}
-                className="bg-slate-900 border border-slate-700 hover:border-amber-500 p-5 rounded-lg shadow-lg cursor-pointer transition-all hover:scale-[1.02] group relative h-[200px] flex flex-col justify-between"
+                className="bg-slate-900 border border-slate-700 hover:border-amber-500 p-5 rounded-lg shadow-lg cursor-pointer transition-all hover:scale-[1.02] group relative h-[200px] flex flex-col justify-between overflow-hidden"
                 onClick={() => {
+                  if (characterToDelete === c.name) return;
                   setCharacter(c);
                   localStorage.setItem('eq3_character', JSON.stringify(c));
                   triggerAlert(`Вы вошли в мир за ${c.name}`, 'success');
                 }}
               >
-                <button
-                  onClick={(e) => handleDeleteCharacter(c.name, e)}
-                  title="Удалить персонажа"
-                  className="absolute top-2 right-2 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold px-2 py-0.5"
-                >
-                  ✕
-                </button>
+                {characterToDelete === c.name ? (
+                  <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+                    <p className="text-white text-sm font-bold mb-4">{t('charDeleteWarn')} {c.name}?</p>
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={(e) => confirmDeleteCharacter(c.name, e)}
+                        className="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded"
+                      >
+                       {language === 'ru' ? 'Да, удалить' : 'Yes, delete'}
+                      </button>
+                      <button 
+                        onClick={cancelDeleteCharacter}
+                        className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-4 py-2 rounded"
+                      >
+                       {language === 'ru' ? 'Отмена' : 'Cancel'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => handleDeleteCharacter(c.name, e)}
+                    title="Удалить персонажа"
+                    className="absolute top-2 right-2 text-slate-400 hover:text-red-400 opacity-70 hover:opacity-100 bg-slate-950/50 hover:bg-slate-900 rounded-md transition-all font-bold px-2 py-0.5 z-20 shadow-sm border border-slate-800"
+                  >
+                    ✕
+                  </button>
+                )}
 
                 <div>
                   <div className="flex justify-between items-center mb-1">
@@ -2355,6 +2548,40 @@ export default function App() {
     );
   }
 
+  if (showOnboarding) {
+    return (
+       <OnboardingCinematic 
+          character={character} 
+          onComplete={() => {
+             setShowOnboarding(false);
+             setSelectedTab('worldmap');
+             
+             // Give a starter mount
+             const starterMount: Item = {
+                id: `mount-${Date.now()}`,
+                name: language === 'ru' ? 'Свисток Пепельного Волка' : 'Ash Wolf Whistle',
+                slot: 'none',
+                description: language === 'ru' ? 'Призывает преданного пепельного волка. Скорость передвижения по земле +60%.' : 'Calls a loyal ash wolf. Ground movement speed +60%.',
+                price: 0,
+                rarity: 'rare',
+                stats: {}
+             };
+             
+             const updatedChar = {
+                ...character,
+                inventory: [...(character.inventory || []), starterMount]
+             };
+             
+             setCharacter(updatedChar);
+             saveCharacter(updatedChar);
+
+             triggerAlert(`Добро пожаловать в Этернию, ${character.name}! Ваша судьба ждет вас!`, 'success');
+          }} 
+          language={language}
+       />
+    );
+  }
+
   return (
     <div className="h-screen bg-slate-1000 font-sans text-gray-200 selection:bg-amber-600 selection:text-white overflow-hidden flex flex-col relative w-full">
       {/* Background World Effect */}
@@ -2366,15 +2593,15 @@ export default function App() {
       
       {/* 1. Global Alert Toast */}
       {alert && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-md border shadow-lg max-w-sm flex items-start gap-3 animate-slide-in ${
+        <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[100] p-4 rounded-xl border shadow-[0_0_30px_rgba(0,0,0,0.5)] max-w-md w-[90%] sm:w-auto flex items-start gap-4 animate-slide-down backdrop-blur-xl ${
           alert.type === 'success'
-          ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+          ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/50'
           : alert.type === 'error'
-          ? 'bg-rose-950 text-rose-300 border-rose-850'
-          : 'bg-slate-900 text-amber-300 border-amber-900/60'
+          ? 'bg-rose-950/90 text-rose-300 border-rose-500/50'
+          : 'bg-slate-900/90 text-amber-300 border-amber-500/30'
         }`}>
-          <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
-          <span className="text-sm font-medium">{alert.message}</span>
+          <AlertCircle className="h-6 w-6 mt-0.5 shrink-0" />
+          <span className="text-sm font-bold tracking-wide drop-shadow-sm leading-relaxed">{alert.message}</span>
         </div>
       )}
 
@@ -2575,143 +2802,185 @@ export default function App() {
          </div>
       </div>
 
-      <main className="flex-1 w-full flex overflow-hidden pt-24 pb-20 relative z-10 px-4 gap-6">
+      <main className="flex-1 w-full flex overflow-hidden pt-24 pb-32 relative z-10 px-4 gap-6 lg:gap-8 max-w-[100vw]">
 
         {/* MMO Floating Chat HUD */}
-        <div className="hidden md:flex fixed bottom-20 left-4 z-40 w-[22rem] h-56 bg-gradient-to-t from-slate-950/90 to-transparent flex-col pointer-events-auto rounded transition-colors group border-b border-t-0 border-l-0 border-r-0 border-amber-900/50 hover:bg-slate-950/80 hover:border hover:border-slate-700/50">
-           {/* Chat Log Viewport */}
-           <div className="flex-1 overflow-y-auto px-2 py-1 space-y-1 text-[10px] font-mono leading-tight custom-scrollbar flex flex-col justify-end pb-2">
-             {chatMessages.length === 0 ? (
-               <div className="text-slate-600 italic">No messages...</div>
-             ) : (
-               chatMessages.slice(-15).map(msg => (
-                 <div key={msg.id} className="drop-shadow-md bg-slate-950/40 px-1 py-0.5 rounded">
-                    <span className={`font-bold transition-all text-[9px] uppercase ${
-                      msg.channel === 'System'
-                        ? 'text-red-400'
-                        : msg.channel === 'Auction'
-                        ? 'text-emerald-400'
-                        : msg.channel === 'Shout'
-                        ? 'text-amber-400 font-extrabold animate-pulse'
-                        : msg.channel === 'Guild'
-                        ? 'text-purple-400'
-                        : 'text-violet-300'
-                    }`}>
-                      [{msg.channel === 'System' ? 'Система' : msg.channel === 'Auction' ? 'Торг' : msg.channel === 'Shout' ? 'Крик' : msg.channel === 'Guild' ? 'ГИ' : msg.channel}]
-                    </span>{' '}
-                    <span className="text-white font-extrabold cursor-pointer hover:text-amber-400">{msg.sender}:</span>{' '}
-                    <span className="text-slate-200">{msg.text}</span>
-                 </div>
-               ))
-             )}
-           </div>
-           
-           {/* Quick Input Bar - Shows on Hover */}
-           <form 
-              onSubmit={handleSendChat}
-              className="px-2 py-1.5 border-t border-slate-700/80 bg-slate-900/90 hidden group-hover:flex items-center gap-1.5 transition-all"
-           >
-              <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider font-mono">[{chatChannel === 'OOC' ? 'Флуд' : chatChannel === 'Auction' ? 'Торг' : chatChannel === 'Guild' ? 'ГИ' : chatChannel === 'Shout' ? 'Крик' : 'Сказать'}]</span>
-              <input
-                 type="text"
-                 placeholder="Нажмите Enter, чтобы сказать..."
-                 value={chatInput}
-                 onChange={(e) => setChatInput(e.target.value)}
-                 className="flex-1 bg-transparent border-none text-[10px] font-mono text-white placeholder-slate-500 focus:outline-none focus:ring-0"
-              />
-           </form>
+        <div className="hidden md:flex fixed bottom-28 left-4 lg:left-[340px] z-[60] flex-col pointer-events-auto transition-all group">
+          {/* Toggle Button */}
+          <button 
+            type="button"
+            onClick={() => setIsChatVisible(!isChatVisible)}
+            className={`absolute ${isChatVisible ? '-top-6' : 'top-0'} left-0 bg-slate-900/80 border border-slate-700/50 text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400 hover:text-amber-400 px-2 py-1 rounded shadow-sm transition-all z-10 ${
+              isChatVisible ? 'opacity-0 group-hover:opacity-100' : 'opacity-100 hover:scale-105'
+            }`}
+          >
+            {isChatVisible ? 'Скрыть чат' : 'Показать чат'}
+          </button>
+          
+          {isChatVisible && (
+            <div className="w-[22rem] h-56 bg-gradient-to-t from-slate-950/90 to-transparent flex flex-col rounded border-b border-amber-900/50 hover:bg-slate-950/80 hover:border hover:border-slate-700/50">
+               {/* Chat Log Viewport */}
+               <div className="flex-1 overflow-y-auto px-2 py-1 space-y-1 text-[10px] font-mono leading-tight custom-scrollbar flex flex-col justify-end pb-2">
+                 {chatMessages.length === 0 ? (
+                   <div className="text-slate-600 italic">No messages...</div>
+                 ) : (
+                   chatMessages.slice(-15).map(msg => (
+                     <div key={msg.id} className="drop-shadow-md bg-slate-950/40 px-1 py-0.5 rounded">
+                        <span className={`font-bold transition-all text-[9px] uppercase ${
+                          msg.channel === 'System'
+                            ? 'text-red-400'
+                            : msg.channel === 'Auction'
+                            ? 'text-emerald-400'
+                            : msg.channel === 'Shout'
+                            ? 'text-amber-400 font-extrabold animate-pulse'
+                            : msg.channel === 'Guild'
+                            ? 'text-purple-400'
+                            : 'text-violet-300'
+                        }`}>
+                          [{msg.channel === 'System' ? 'Система' : msg.channel === 'Auction' ? 'Торг' : msg.channel === 'Shout' ? 'Крик' : msg.channel === 'Guild' ? 'ГИ' : msg.channel}]
+                        </span>{' '}
+                        <span className="text-white font-extrabold cursor-pointer hover:text-amber-400">{msg.sender}:</span>{' '}
+                        <span className="text-slate-200">{msg.text}</span>
+                     </div>
+                   ))
+                 )}
+               </div>
+               
+               {/* Quick Input Bar - Shows on Hover */}
+               <form 
+                  onSubmit={handleSendChat}
+                  className="px-2 py-1.5 border-t border-slate-700/80 bg-slate-900/90 hidden group-hover:flex items-center gap-1.5 transition-all w-full"
+               >
+                  <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider font-mono">[{chatChannel === 'OOC' ? 'Флуд' : chatChannel === 'Auction' ? 'Торг' : chatChannel === 'Guild' ? 'ГИ' : chatChannel === 'Shout' ? 'Крик' : 'Сказать'}]</span>
+                  <input
+                     type="text"
+                     placeholder="Нажмите Enter, чтобы сказать..."
+                     value={chatInput}
+                     onChange={(e) => setChatInput(e.target.value)}
+                     className="flex-1 bg-transparent border-none text-[10px] font-mono text-white placeholder-slate-500 focus:outline-none focus:ring-0"
+                  />
+               </form>
+            </div>
+          )}
         </div>
         
         {/* ================= LEFT ASIDE PANEL: Status / Character Sheet ================= */}
-        <aside className="hidden lg:flex flex-col w-[320px] shrink-0 space-y-4 overflow-y-auto overflow-x-hidden custom-scrollbar pr-2 pb-4">
+        <aside className="hidden lg:flex flex-col w-[320px] shrink-0 space-y-5 overflow-y-auto overflow-x-hidden custom-scrollbar pr-2 pb-16">
           
+          {/* Next-Gen 3D Model View */}
+          <section className="bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-0.5 shadow-2xl overflow-hidden relative h-[400px] flex flex-col group ring-1 ring-black/50">
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-slate-950/80 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-slate-700/60 shadow-lg">
+               <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+               <span className="text-[9px] font-mono font-bold text-slate-200 uppercase tracking-widest drop-shadow-sm">3D Persona View</span>
+            </div>
+            
+            <div className="flex-1 w-full h-full relative z-0 bg-slate-950/50 rounded-xl overflow-hidden">
+               <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-900/20 pointer-events-none z-10" />
+               <Character3DModel 
+                  charClass={character.class} 
+                  race={character.visualCustomization?.skinType?.split(' ')[0] || character.race} 
+                  equipment={{ ...character.equipment, ...(character.visualCustomization?.transmogs || {}) }} 
+               />
+            </div>
+          </section>
+
           {/* Attributes */}
-          <section className="bg-slate-900/80 backdrop-blur-md border border-slate-700/80 rounded-lg p-4 shadow-xl">
-            <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono border-b border-slate-800 pb-2 mb-3 flex items-center gap-2">
-              <User className="h-4 w-4 text-amber-500" />
+          <section className="bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-5 shadow-xl relative overflow-hidden group">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-amber-500/10 transition-colors" />
+            
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-200 font-mono border-b border-slate-700/60 pb-3 mb-4 flex items-center gap-2 relative z-10">
+              <User className="h-4 w-4 text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]" />
               Характеристики Героя
             </h3>
             
-            <div className="space-y-1.5 text-[11px] font-mono">
-              <div className="flex justify-between bg-slate-950/60 p-1.5 rounded">
-                <span className="text-slate-400">СИЛ (Сила)</span>
-                <span className="font-bold text-amber-200">{character.stats.str}</span>
+            <div className="space-y-2 text-[11px] font-mono relative z-10">
+              <div className="flex justify-between items-center bg-slate-950/60 hover:bg-slate-950/80 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-800">
+                <span className="text-slate-400 font-medium">СИЛ (Сила)</span>
+                <span className="font-black text-amber-300 drop-shadow-sm text-xs">{character.stats.str}</span>
               </div>
-              <div className="flex justify-between bg-slate-950/60 p-1.5 rounded">
-                <span className="text-slate-400">ВЫН (Выносливость)</span>
-                <span className="font-bold text-emerald-200">{character.stats.sta}</span>
+              <div className="flex justify-between items-center bg-slate-950/60 hover:bg-slate-950/80 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-800">
+                <span className="text-slate-400 font-medium">ВЫН (Выносливость)</span>
+                <span className="font-black text-emerald-300 drop-shadow-sm text-xs">{character.stats.sta}</span>
               </div>
-              <div className="flex justify-between bg-slate-950/60 p-1.5 rounded">
-                <span className="text-slate-400">ЛОВ (Ловкость)</span>
-                <span className="font-bold text-sky-200">{character.stats.agi}</span>
+              <div className="flex justify-between items-center bg-slate-950/60 hover:bg-slate-950/80 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-800">
+                <span className="text-slate-400 font-medium">ЛОВ (Ловкость)</span>
+                <span className="font-black text-sky-300 drop-shadow-sm text-xs">{character.stats.agi}</span>
               </div>
-              <div className="flex justify-between bg-slate-950/60 p-1.5 rounded">
-                <span className="text-slate-400">СНД (Сноровка)</span>
-                <span className="font-bold text-indigo-200">{character.stats.dex}</span>
+              <div className="flex justify-between items-center bg-slate-950/60 hover:bg-slate-950/80 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-800">
+                <span className="text-slate-400 font-medium">СНД (Сноровка)</span>
+                <span className="font-black text-indigo-300 drop-shadow-sm text-xs">{character.stats.dex}</span>
               </div>
-              <div className="flex justify-between bg-slate-950/60 p-1.5 rounded">
-                <span className="text-slate-400">ИНТ (Интеллект)</span>
-                <span className="font-bold text-purple-200">{character.stats.int}</span>
+              <div className="flex justify-between items-center bg-slate-950/60 hover:bg-slate-950/80 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-800">
+                <span className="text-slate-400 font-medium">ИНТ (Интеллект)</span>
+                <span className="font-black text-purple-300 drop-shadow-sm text-xs">{character.stats.int}</span>
               </div>
-              <div className="flex justify-between bg-slate-950/60 p-1.5 rounded">
-                <span className="text-slate-400">МУД (Мудрость)</span>
-                <span className="font-bold text-blue-200">{character.stats.wis}</span>
+              <div className="flex justify-between items-center bg-slate-950/60 hover:bg-slate-950/80 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-800">
+                <span className="text-slate-400 font-medium">МУД (Мудрость)</span>
+                <span className="font-black text-blue-300 drop-shadow-sm text-xs">{character.stats.wis}</span>
               </div>
-              <div className="flex justify-between bg-slate-950/60 p-1.5 rounded">
-                <span className="text-slate-400">ХАР (Харизма)</span>
-                <span className="font-bold text-pink-200">{character.stats.cha}</span>
+              <div className="flex justify-between items-center bg-slate-950/60 hover:bg-slate-950/80 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-800">
+                <span className="text-slate-400 font-medium">ХАР (Харизма)</span>
+                <span className="font-black text-pink-300 drop-shadow-sm text-xs">{character.stats.cha}</span>
               </div>
-              <div className="flex justify-between bg-slate-950 p-2 rounded border-t border-amber-600/10 mt-3 shadow-inner">
-                <span className="text-amber-500">Exp до Уровня</span>
-                <span className="font-bold text-amber-400">{character.exp} / {character.expToNextLevel}</span>
+              <div className="flex justify-between items-center bg-slate-950/80 p-2.5 rounded-lg border border-amber-500/20 mt-4 shadow-inner ring-1 ring-amber-500/10">
+                <span className="text-amber-500 font-bold uppercase tracking-widest text-[9px]">Exp до Уровня</span>
+                <span className="font-black text-amber-400 text-xs">{character.exp} / {character.expToNextLevel}</span>
               </div>
-              <div className="flex justify-between bg-slate-950 p-1.5 rounded">
-                <span className="text-slate-500">Мировоззрение</span>
-                <span className="font-bold text-slate-300 text-[10px] uppercase truncate max-w-[150px]">{character.deity}</span>
+              <div className="flex justify-between items-center bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 mt-2">
+                <span className="text-slate-500 font-medium">Мировоззрение</span>
+                <span className="font-black text-slate-200 text-[10px] uppercase tracking-wider truncate max-w-[150px]">{character.deity}</span>
               </div>
             </div>
           </section>
 
           {/* Active Equipment Slots */}
-          <section className="bg-slate-900/80 backdrop-blur-md border border-slate-700/80 rounded-lg p-4 shadow-xl">
-            <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono border-b border-slate-800 pb-2 mb-3 flex items-center gap-2">
-              <Shield className="h-4 w-4 text-emerald-500" />
+          <section className="bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-5 shadow-xl relative overflow-hidden group">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-emerald-500/10 transition-colors" />
+
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-200 font-mono border-b border-slate-700/60 pb-3 mb-4 flex items-center gap-2 relative z-10">
+              <Shield className="h-4 w-4 text-emerald-500 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
               Снаряжение Героя
             </h3>
 
-            <div className="space-y-2 text-xs font-mono">
-              {(['primary', 'chest', 'head', 'hands', 'feet'] as SlotType[]).map((slot) => {
+            <div className="space-y-2.5 text-xs font-mono relative z-10">
+              {(['primary', 'chest', 'head', 'hands', 'feet', 'amulet', 'cloak'] as SlotType[]).map((slot) => {
                 const item = character.equipment[slot];
                 const slotNamesEnRu: Record<string, string> = {
                   primary: 'Главная рука',
                   chest: 'Грудь',
                   head: 'Шлем',
+                  shoulders: 'Плечи',
                   hands: 'Перчатки',
+                  waist: 'Пояс',
                   feet: 'Сапоги',
                   secondary: 'Вторая рука',
-                  arms: 'Наручи',
-                  legs: 'Поножи'
+                  legs: 'Поножи',
+                  cloak: 'Плащ',
+                  amulet: 'Амулет',
+                  ring1: 'Кольцо 1',
+                  ring2: 'Кольцо 2',
+                  fateFocus: 'Оскол. Фокус'
                 };
                 return (
-                  <div key={slot} className="bg-slate-1000/90 p-2 rounded border border-slate-700/80 flex items-center justify-between gap-2 min-h-[46px] shadow-sm">
+                  <div key={slot} className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-700/60 flex items-center justify-between gap-3 min-h-[52px] shadow-sm hover:border-slate-600 transition-colors">
                     <div>
-                      <span className="text-[9px] text-slate-500 block uppercase font-bold tracking-widest">{slotNamesEnRu[slot] || slot}</span>
+                      <span className="text-[9px] text-slate-500 block uppercase font-bold tracking-widest opacity-80">{slotNamesEnRu[slot] || slot}</span>
                       {item ? (
-                        <span className={`font-semibold text-[11px] block mt-0.5 ${
-                          item.rarity === 'epic' ? 'text-amber-400 font-bold drop-shadow-md' : item.rarity === 'rare' ? 'text-blue-400 drop-shadow' : 'text-slate-200'
+                        <span className={`font-black text-[11px] block mt-1 tracking-tight ${
+                          item.rarity === 'epic' ? 'text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]' : item.rarity === 'rare' ? 'text-blue-400 drop-shadow-[0_0_5px_rgba(96,165,250,0.5)]' : 'text-slate-200'
                         }`}>
                           {item.name}
                         </span>
                       ) : (
-                        <span className="text-[10px] text-slate-600 italic">Пусто (Empty)</span>
+                        <span className="text-[10px] text-slate-600 italic mt-0.5 block font-serif">Пусто (Empty)</span>
                       )}
                     </div>
                     {item && (
                       <button
                         onClick={() => handleUnequipItem(slot)}
-                        className="text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-red-400 py-1.5 px-2.5 rounded font-bold cursor-pointer transition-all shrink-0 border border-slate-700 hover:border-red-900"
+                        className="text-[9px] bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-red-400 py-1.5 px-3 rounded-lg font-bold cursor-pointer transition-all shrink-0 border border-slate-700 hover:border-red-900/80 shadow-sm"
                       >
-                        Снять
+                         Снять
                       </button>
                     )}
                   </div>
@@ -2725,66 +2994,79 @@ export default function App() {
         <section className="flex-1 flex flex-col min-w-0 h-full relative">
           
           {/* Action Bar (MMO Top/Bottom Hotbar) */}
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-4xl px-4 flex flex-col items-center">
+          <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-5xl px-4 flex flex-col items-center group/hotbar">
             {/* EXP Bar overlay */}
-            <div className="w-full bg-slate-950 h-2 border border-slate-800 rounded-t-md overflow-hidden relative shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+            <div className="w-full bg-slate-950/80 h-2.5 border border-slate-700/50 rounded-t-xl overflow-hidden relative shadow-lg backdrop-blur-sm pointer-events-none">
                <div 
-                  className="bg-purple-600/80 h-full transition-all duration-300 drop-shadow-[0_0_5px_rgba(147,51,234,0.8)]"
+                  className="bg-gradient-to-r from-purple-700 via-fuchsia-500 to-pink-500 h-full transition-all duration-500 ease-in-out shadow-[0_0_12px_rgba(217,70,239,0.8)]"
                   style={{ width: `${(character.exp / character.expToNextLevel) * 100}%` }}
                />
                {/* Notches */}
-               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI0Ij48cmVjdCB3aWR0aD0iMSIgaGVpZ2h0PSI0IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMykiLz48L3N2Zz4=')]"></div>
+               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI0Ij48cmVjdCB3aWR0aD0iMSIgaGVpZ2h0PSI0IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNCkiLz48L3N2Zz4=')] opacity-60"></div>
             </div>
             
-            <div className="bg-slate-900/90 backdrop-blur-lg border border-slate-700/80 p-1.5 rounded-b-xl shadow-2xl flex items-center justify-center gap-1 w-full max-w-fit shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
+            <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-700/50 p-2 sm:p-3 rounded-b-2xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 w-full relative group-hover/hotbar:border-slate-600/60 transition-colors">
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-amber-900/5 pointer-events-none rounded-b-2xl" />
               {[
-                { id: 'zones', icon: Compass, label: t('zones'), key: '1' },
-                { id: 'lore', icon: BookOpen, label: t('lore'), key: '2' },
-                { id: 'quests', icon: Database, label: t('quests'), key: '3' },
-                { id: 'merchant', icon: ShoppingCart, label: t('merchant'), key: '4' },
+                { id: 'worldmap', icon: Globe, label: t('worldmap'), key: '1' },
+                { id: 'events', icon: Calendar, label: t('events' as any), key: 'E' },
+                { id: 'zones', icon: Compass, label: t('zones'), key: '2' },
+                { id: 'lore', icon: BookOpen, label: t('lore'), key: '3' },
+                { id: 'quests', icon: Database, label: t('quests'), key: '4' },
+                { id: 'merchant', icon: ShoppingCart, label: t('merchant'), key: '5' },
                 { id: 'character', icon: User, label: t('character'), key: 'C' },
                 { id: 'guild-party', icon: Users, label: t('guild-party'), key: 'G' },
                 { id: 'chat', icon: MessageSquare, label: t('chat'), key: 'Enter' },
+                { id: 'progression', icon: GraduationCap, label: t('progression'), key: 'T' },
                 { id: 'dungeons', icon: Flame, label: t('dungeons'), key: 'R' },
+                { id: 'arena', icon: Swords, label: t('arena' as any), key: 'A' },
                 { id: 'crafting-market', icon: Hammer, label: t('craft-market'), key: 'M' },
                 { id: 'pets-housing', icon: Sparkles, label: t('pets-housing'), key: 'P' },
-              ].map((btn) => (
-                <button
-                  key={btn.id}
-                  onClick={() => { setSelectedTab(btn.id); if(btn.id === 'zones') setInCombat(false); }}
-                  className={`group relative h-12 w-12 sm:h-12 sm:w-auto sm:px-3 sm:py-1 rounded-md transition-all flex flex-col justify-center items-center gap-0.5 cursor-pointer border ${
-                    selectedTab === btn.id && (!inCombat || btn.id !== 'zones')
-                      ? 'bg-amber-600 border-amber-400 text-slate-950 shadow-[0_0_15px_rgba(217,119,6,0.6)] z-10' 
-                      : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-amber-400 hover:border-slate-600'
-                  }`}
-                  title={btn.label}
-                >
-                  <btn.icon className={`h-5 w-5 ${btn.id === 'dungeons' && selectedTab !== btn.id ? 'text-red-400' : ''}`} />
-                  <span className="hidden sm:block text-[9px] font-bold uppercase tracking-wider font-mono">{btn.label}</span>
-                  
-                  {/* Hotkey Hint */}
-                  <span className={`absolute -top-2 -right-2 text-[8px] font-mono font-bold px-1 rounded shadow-sm border ${
-                    selectedTab === btn.id && (!inCombat || btn.id !== 'zones')
-                     ? 'bg-slate-900 border-amber-400/50 text-amber-500'
-                     : 'bg-slate-800 border-slate-700 text-slate-300'
-                  }`}>
-                    {btn.key}
-                  </span>
-                </button>
-              ))}
+                { id: 'companions', icon: HeartHandshake, label: language === 'ru' ? 'Лагерь' : 'Camp', key: 'L' },
+              ].map((btn) => {
+                const isActive = selectedTab === btn.id && (!inCombat || btn.id !== 'zones');
+                return (
+                  <button
+                    key={btn.id}
+                    onClick={() => { setSelectedTab(btn.id as any); if(btn.id === 'zones') setInCombat(false); }}
+                    className={`group relative shrink-0 h-10 w-10 sm:h-12 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg transition-all flex flex-col justify-center items-center gap-1 cursor-pointer overflow-hidden ${
+                      isActive
+                        ? 'bg-slate-800/90 border border-amber-500/60 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)]' 
+                        : 'bg-transparent border border-transparent text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 hover:border-slate-700'
+                    }`}
+                    title={btn.label}
+                  >
+                    {isActive && <div className="absolute inset-0 bg-gradient-to-t from-amber-500/10 to-transparent opacity-50" />}
+                    <btn.icon className={`h-5 w-5 relative z-10 transition-transform group-hover:scale-110 ${btn.id === 'dungeons' && !isActive ? 'text-red-400/80 group-hover:text-red-400' : ''}`} />
+                    <span className="hidden sm:block text-[9px] font-bold uppercase tracking-wider font-mono relative z-10">
+                      {btn.label}
+                    </span>
+                    
+                    {/* Hotkey Hint */}
+                    <span className={`absolute -top-1.5 -right-1.5 text-[8px] font-mono font-bold px-1 rounded-sm shadow-sm border ${
+                      isActive
+                       ? 'bg-amber-500 text-slate-950 border-amber-600'
+                       : 'bg-slate-900 border-slate-700/50 text-slate-500 group-hover:text-amber-500/70 group-hover:border-amber-500/30'
+                    }`}>
+                      {btn.key}
+                    </span>
+                  </button>
+                );
+              })}
               
               {user?.isAdmin && (
                 <button
                   onClick={() => setSelectedTab('admin')}
-                  className={`group relative h-12 w-12 sm:h-12 sm:w-auto sm:px-3 sm:py-1 rounded-md transition-all flex flex-col justify-center items-center gap-0.5 cursor-pointer border ${
+                  className={`group relative shrink-0 h-10 w-10 sm:h-12 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg transition-all flex flex-col justify-center items-center gap-1 cursor-pointer overflow-hidden border ${
                     selectedTab === 'admin' 
-                      ? 'bg-red-600 border-red-400 text-white shadow-[0_0_15px_rgba(220,38,38,0.6)] z-10' 
-                      : 'bg-slate-950/80 border-red-900/50 text-red-500 hover:bg-red-900/40 hover:text-red-400 hover:border-red-700'
+                      ? 'bg-red-950/80 border-red-500/60 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.25)]' 
+                      : 'bg-transparent border-transparent text-red-500/70 hover:bg-red-950/40 hover:text-red-400 hover:border-red-900/50'
                   }`}
                 >
-                  <Terminal className="h-5 w-5" />
-                  <span className="hidden sm:block text-[9px] font-bold uppercase tracking-wider font-mono">Админ</span>
-                  <span className="absolute -top-2 -right-2 text-[8px] font-mono font-bold px-1 rounded shadow-sm border bg-slate-800 border-red-900 text-red-400">
+                  {selectedTab === 'admin' && <div className="absolute inset-0 bg-gradient-to-t from-red-500/10 to-transparent opacity-50" />}
+                  <Terminal className="h-5 w-5 relative z-10 transition-transform group-hover:scale-110" />
+                  <span className="hidden sm:block text-[9px] font-bold uppercase tracking-wider font-mono relative z-10">Админ</span>
+                  <span className="absolute -top-1.5 -right-1.5 text-[8px] font-mono font-bold px-1 rounded-sm shadow-sm border bg-slate-900 border-red-900/50 text-red-500/70">
                     ~
                   </span>
                 </button>
@@ -2811,103 +3093,123 @@ export default function App() {
               />
 
               {/* Monster & Party pools */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-slate-800 pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-slate-700/50 pb-6 relative z-10">
                 
                 {/* Monster */}
-                <div className="space-y-2 bg-slate-950 p-3.5 rounded border border-red-900/40">
-                  <div className="flex justify-between items-center text-sm font-bold text-white">
-                    <span className="flex items-center gap-1.5">
-                      <Sword className="h-4 w-4 text-red-500 animate-pulse" />
-                      {combatMonster.name} {combatMonster.isBoss && '👹 (Boss)'}
-                    </span>
-                    <span className="text-xs text-red-400 font-mono">Level {combatMonster.level}</span>
+                <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-red-900/30 p-5 shadow-xl relative overflow-hidden group hover:border-red-500/40 transition-colors">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-red-600/10 transition-colors" />
+                  
+                  <div className="flex justify-between items-start mb-3 relative z-10">
+                    <div>
+                      <span className="flex items-center gap-2 text-base font-black text-white tracking-tight drop-shadow-sm">
+                        <Sword className="h-5 w-5 text-red-500 animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                        {combatMonster.name} {combatMonster.isBoss && '👹 (Boss)'}
+                      </span>
+                      <span className="text-[10px] text-red-400/80 font-mono font-bold uppercase tracking-widest mt-1 block">Level {combatMonster.level} Entity</span>
+                    </div>
+                    <div className="text-right">
+                       <span className="text-[10px] text-slate-500 font-mono uppercase tracking-widest block mb-0.5">Target HP</span>
+                       <span className="font-black text-red-400 font-mono drop-shadow-sm">{combatMonster.hp} / {combatMonster.maxHp}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs text-slate-400 font-mono">
-                    <span>Target HP</span>
-                    <span>{combatMonster.hp} / {combatMonster.maxHp}</span>
-                  </div>
-                  <div className="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden">
+                  
+                  <div className="w-full bg-slate-950/80 rounded-full h-3 overflow-hidden shadow-inner ring-1 ring-red-900/20 relative z-10">
                     <div 
-                      className="bg-red-600 h-full transition-all duration-300"
+                      className="bg-gradient-to-r from-red-800 to-red-500 h-full transition-all duration-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
                       style={{ width: `${(combatMonster.hp / combatMonster.maxHp) * 100}%` }}
                     />
                   </div>
                 </div>
 
                 {/* You & Your Companion Mates */}
-                <div className="space-y-3 bg-slate-950 p-3.5 rounded border border-slate-800">
-                  <span className="text-[10px] text-slate-500 uppercase font-mono tracking-wider font-bold block">Party status</span>
+                <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-blue-900/20 p-5 shadow-xl relative overflow-hidden group hover:border-blue-500/30 transition-colors flex flex-col justify-between space-y-4">
+                  <div className="absolute top-0 left-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-blue-500/10 transition-colors" />
                   
-                  {/* Yourself */}
-                  <div>
-                    <div className="flex justify-between text-xs font-semibold text-white">
-                      <span>{character.name} (You)</span>
-                      <span>{character.hp} / {character.maxHp} HP</span>
-                    </div>
-                    <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mt-1">
-                      <div 
-                        className="bg-emerald-500 h-full"
-                        style={{ width: `${(character.hp / character.maxHp) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Companions AI */}
-                  {combatParty.map((mate, i) => (
-                    <div key={i} className="pt-0.5">
-                      <div className="flex justify-between text-xs text-slate-300">
-                        <span>{mate.name} ({mate.class})</span>
-                        <span>{mate.hp} / {mate.maxHp} HP</span>
+                  <div className="space-y-4 relative z-10">
+                    <span className="text-[10px] text-blue-400/80 uppercase font-mono tracking-widest font-bold block flex items-center gap-2">
+                       <Shield className="h-3.5 w-3.5 text-blue-500" />
+                       Party Status
+                    </span>
+                    
+                    {/* Yourself */}
+                    <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
+                      <div className="flex justify-between items-end mb-1.5">
+                        <div>
+                           <span className="text-xs font-black text-white drop-shadow-sm block leading-none mb-1">{character.name}</span>
+                           <span className="text-[9px] text-emerald-400 font-mono uppercase font-bold tracking-wider leading-none">(You)</span>
+                        </div>
+                        <span className="text-xs font-black text-emerald-300 font-mono">{character.hp} / {character.maxHp} HP</span>
                       </div>
-                      <div className="w-full bg-slate-900 rounded-full h-1 mt-0.5 overflow-hidden">
+                      <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden shadow-inner ring-1 ring-black">
                         <div 
-                          className="bg-cyan-500 h-full"
-                          style={{ width: `${(mate.hp / mate.maxHp) * 100}%` }}
+                          className="bg-emerald-500 h-full transition-all duration-300 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                          style={{ width: `${(character.hp / character.maxHp) * 100}%` }}
                         />
                       </div>
                     </div>
-                  ))}
+
+                    {/* Companions AI */}
+                    <div className="space-y-2.5 pl-2 border-l border-slate-800">
+                      {combatParty.map((mate, i) => (
+                        <div key={i} className="relative">
+                          <div className="flex justify-between items-end mb-1">
+                            <div>
+                               <span className="text-[11px] font-bold text-slate-200 block leading-none mb-0.5">{mate.name}</span>
+                               <span className="text-[8px] text-cyan-500 font-mono uppercase tracking-wider leading-none">({mate.class})</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-mono font-bold">{mate.hp} / {mate.maxHp} HP</span>
+                          </div>
+                          <div className="w-full bg-slate-950 rounded-full h-1 overflow-hidden">
+                            <div 
+                              className="bg-cyan-500 h-full transition-all shadow-[0_0_5px_rgba(6,182,212,0.5)]"
+                              style={{ width: `${(mate.hp / mate.maxHp) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
                   {/* Active Party Buffs Section */}
-                  <div className="pt-3 border-t border-slate-800/80">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] text-amber-500 uppercase font-mono tracking-wider font-bold flex items-center gap-1.5">
-                        <Sparkles className="h-3 w-3 text-amber-500 animate-pulse" />
-                        Active Party Buffs
+                  <div className="pt-4 border-t border-slate-800/80 relative z-10 w-full mt-auto">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[10px] text-amber-500 uppercase font-mono tracking-widest font-bold flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-500 animate-pulse drop-shadow-[0_0_5px_rgba(245,158,11,0.8)]" />
+                        Active enhancements
                       </span>
-                      <span className="text-[9px] text-slate-500 font-mono">
+                      <span className="text-[9px] text-slate-400 font-mono bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
                         {activeBuffs.length} Active
                       </span>
                     </div>
 
                     {activeBuffs.length > 0 ? (
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                      <div className="space-y-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
                         {activeBuffs.map((buff) => (
                           <div 
                             key={buff.id} 
-                            className="bg-slate-900 border border-slate-800/80 rounded px-2.5 py-1.5 flex items-start justify-between gap-1.5 text-[11px] font-mono hover:border-amber-600/20 transition-all duration-200"
+                            className="bg-slate-950/60 border border-slate-700/50 rounded-lg p-2.5 flex items-start justify-between gap-2 transition-all duration-200 hover:border-amber-500/30 group/buff"
                           >
-                            <div className="space-y-0.5 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-amber-300 text-[11px] truncate">
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-amber-300 text-xs truncate drop-shadow-sm">
                                   {buff.name}
                                 </span>
-                                <span className="text-[9px] text-slate-500 shrink-0">
-                                  from {buff.provider}
+                                <span className="text-[9px] text-slate-500 shrink-0 font-mono uppercase tracking-wider">
+                                  by {buff.provider}
                                 </span>
                               </div>
-                              <p className="text-[10px] text-slate-400 leading-tight">
+                              <p className="text-[10px] text-slate-300 leading-tight">
                                 {buff.effect}
                               </p>
                             </div>
-                            <div className="bg-amber-950/40 border border-amber-900/40 rounded px-1.5 py-0.5 text-amber-400 text-[9px] font-bold shrink-0">
+                            <div className="bg-amber-950/60 border border-amber-500/30 rounded px-2 py-1 text-amber-400 text-[10px] font-black shrink-0 font-mono group-hover/buff:shadow-[0_0_8px_rgba(245,158,11,0.3)]">
                               {buff.duration} {buff.duration === 1 ? 'rnd' : 'rnds'}
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="bg-slate-900/40 border border-dashed border-slate-800/60 rounded p-2 text-center text-slate-600 text-[10px] italic font-mono">
+                      <div className="bg-slate-950/40 border border-dashed border-slate-800/80 rounded-lg p-3 text-center text-slate-500 text-[10px] italic font-serif">
                         No active party enhancements
                       </div>
                     )}
@@ -3038,7 +3340,7 @@ export default function App() {
                       Tactical Dodge (30s)
                     </button>
 
-                    {character.class === 'Warrior' || character.class === 'Paladin' || character.class === 'Shadow Knight' ? (
+                    {character.class === 'Warrior' || character.class === 'Paladin' ? (
                       <button
                         onClick={() => handleCombatAction('taunt')}
                         disabled={combatGcd}
@@ -3093,29 +3395,51 @@ export default function App() {
             selectedTab === 'zones' && (
               <div className="bg-slate-900 border border-slate-800 rounded-lg shadow-sm space-y-6 relative overflow-hidden">
                 {/* Active Zone Visual Header */}
-                <div className="relative h-64 w-full flex items-end p-6 border-b border-amber-900/40">
+                <div className="relative h-64 w-full flex items-end p-6 border-b border-amber-900/40 overflow-hidden group">
                   <div 
-                    className="absolute inset-0 bg-cover bg-center transition-all duration-1000"
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] ease-linear group-hover:scale-110"
                     style={{ backgroundImage: `url('${activeZone.imageUrl || 'https://images.unsplash.com/photo-1542224566-6e85f2e6772f?q=80&w=1920&auto=format&fit=crop'}')` }}
                   ></div>
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent"></div>
-                  <div className="absolute inset-0 bg-slate-900/20"></div>
                   
-                  <div className="relative z-10 w-full max-w-2xl">
-                     <div className={`text-[10px] font-extrabold uppercase mb-2 inline-block px-2 py-1 rounded backdrop-blur-md shadow-lg ${
-                        activeZone.difficulty === 'Safe' ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50'
-                        : activeZone.difficulty === 'Easy' ? 'bg-blue-950/80 text-blue-400 border border-blue-800/50'
-                        : activeZone.difficulty === 'Medium' ? 'bg-yellow-950/80 text-yellow-400 border border-yellow-800/50'
-                        : 'bg-red-950/80 text-red-400 border border-red-800/50'
-                     }`}>
-                        Угроза: {activeZone.difficulty}
+                  {/* Weather and Atmosphere layer */}
+                  <div className="absolute inset-0 pointer-events-none opacity-40 mix-blend-overlay">
+                     <div className="w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] animate-pulse"></div>
+                  </div>
+                  
+                  {/* Living Horizon: Distant Giant Entity Placeholder */}
+                  <div className="absolute top-1/4 right-[10%] w-32 h-32 rounded-full border border-sky-400/20 shadow-[0_0_80px_rgba(56,189,248,0.2)] animate-[pulse_10s_ease-in-out_infinite] pointer-events-none mix-blend-screen" />
+                  <div className="absolute bottom-10 -right-10 w-96 h-96 opacity-10 blur-xl rounded-full bg-indigo-500 animate-[bounce_8s_ease-in-out_infinite] pointer-events-none" />
+
+                  {/* Sun / volumetric light rays placeholder */}
+                  <div className="absolute -top-32 -left-32 w-96 h-96 bg-amber-500/20 rounded-full blur-[100px] pointer-events-none" />
+
+                  <div className="relative z-10 w-full flex justify-between items-end">
+                     <div className="max-w-2xl">
+                        <div className="flex gap-2 mb-2">
+                           <div className={`text-[10px] font-extrabold uppercase inline-flex items-center gap-1.5 px-2 py-1 rounded backdrop-blur-md shadow-lg ${
+                              activeZone.difficulty === 'Safe' ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50'
+                              : activeZone.difficulty === 'Easy' ? 'bg-blue-950/80 text-blue-400 border border-blue-800/50'
+                              : activeZone.difficulty === 'Medium' ? 'bg-yellow-950/80 text-yellow-400 border border-yellow-800/50'
+                              : 'bg-red-950/80 text-red-400 border border-red-800/50'
+                           }`}>
+                              Угроза: {activeZone.difficulty}
+                           </div>
+                           
+                           {/* Atmospheric State */}
+                           <div className="text-[10px] font-extrabold uppercase inline-flex items-center gap-1.5 px-2 py-1 rounded backdrop-blur-md shadow-lg bg-indigo-950/60 text-indigo-300 border border-indigo-800/50 hidden sm:flex">
+                              <CloudRain className="w-3 h-3" />
+                              {language === 'ru' ? 'Объёмный шторм (Nanite+Lumen)' : 'Volumetric Storm (Nanite+Lumen)'}
+                           </div>
+                        </div>
+                        
+                        <h2 className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg tracking-tight mb-2">
+                           {activeZone.name}
+                        </h2>
+                        <p className="text-sm font-mono text-slate-300 drop-shadow-md leading-relaxed hidden sm:block">
+                           {activeZone.description}
+                        </p>
                      </div>
-                     <h2 className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg tracking-tight mb-2">
-                        {activeZone.name}
-                     </h2>
-                     <p className="text-sm font-mono text-slate-300 drop-shadow-md leading-relaxed hidden sm:block">
-                        {activeZone.description}
-                     </p>
                   </div>
                 </div>
 
@@ -3130,11 +3454,13 @@ export default function App() {
                       {GAME_ZONES.map((zone) => (
                         <button
                           key={zone.id}
+                          disabled={character.level < zone.minLevel}
                           onClick={() => {
+                            if (character.level < zone.minLevel) return;
                             setActiveZone(zone);
                             setLoreTopic(zone.name);
                           }}
-                          className={`text-slate-100 h-24 p-0 rounded-lg font-mono border text-left transition-all relative overflow-hidden group cursor-pointer ${
+                          className={`text-slate-100 h-24 p-0 rounded-lg font-mono border text-left transition-all relative overflow-hidden group ${character.level < zone.minLevel ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${
                             activeZone.id === zone.id
                               ? 'border-amber-500 ring-2 ring-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.4)]'
                               : 'border-slate-700 hover:border-amber-500/50 hover:shadow-lg'
@@ -3189,7 +3515,7 @@ export default function App() {
                               <div className="text-[9px] text-slate-500 mt-0.5">Уровень: {z.minLevel}+</div>
                             </div>
                             <button
-                              disabled={character.gold < 5}
+                              disabled={character.gold < 5 || character.level < z.minLevel}
                               onClick={() => {
                                 const updatedChar = { ...character, gold: character.gold - 5 };
                                 saveCharacter(updatedChar);
@@ -3321,33 +3647,65 @@ export default function App() {
             )
           )}
 
+          {/* TAB 0: World Map */}
+          {selectedTab === 'worldmap' && (
+             <div className="h-full w-full">
+               <WorldMap 
+                 currentZoneId={activeZone.id}
+                 language={language}
+                  onTravel={(id) => {
+                   const z = GAME_ZONES.find(x => x.id === id);
+                   if (z) {
+                     if (character.level < z.minLevel) {
+                         triggerAlert(language === 'ru' ? `Недостаточный уровень! Требуется ${z.minLevel}.` : `Level too low! Requires ${z.minLevel}.`, 'error');
+                         return;
+                     }
+                     setActiveZone(z);
+                     setLoreTopic(z.name);
+                     setSelectedTab('zones');
+                     triggerAlert(language === 'ru' ? `Вы отправились в ${z.name}` : `You traveled to ${z.name}`, 'info');
+                   }
+                 }}
+               />
+             </div>
+          )}
+
+          {/* TAB EVENTS */}
+          {selectedTab === 'events' && (
+             <div className="h-full">
+               <WorldEventsCalendar language={language} />
+             </div>
+          )}
+
           {/* TAB 2: Tome of Norrath Deep Lore Book library */}
           {selectedTab === 'lore' && (
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 shadow-sm space-y-5 animate-fade-in">
-              <div className="border-b border-slate-800 pb-3">
-                <h3 className="font-serif text-lg font-bold text-white flex items-center gap-1.5">
-                  <BookOpen className="h-5 w-5 text-amber-500" />
+            <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-xl space-y-6 animate-fade-in relative overflow-hidden group/lore min-h-[500px]">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-[80px] pointer-events-none group-hover/lore:bg-amber-500/10 transition-colors duration-1000" />
+              
+              <div className="border-b border-slate-700/50 pb-4 relative z-10">
+                <h3 className="font-sans text-2xl font-black tracking-tight text-white flex items-center gap-2 drop-shadow-sm">
+                  <BookOpen className="h-6 w-6 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
                   Архивы Этернии (Масштабный Мир)
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-400 mt-2 font-medium max-w-xl leading-relaxed">
                   Обратитесь к глобальным архивам. Ищите любую локацию, расу, кибер-город или мифическое существо, чтобы исследовать лор бесшовной вселенной с использованием ИИ.
                 </p>
               </div>
 
               {/* Input for AI archives */}
-              <form onSubmit={handleSearchLore} className="flex gap-2">
+              <form onSubmit={handleSearchLore} className="flex gap-3 relative z-10">
                 <input
                   type="text"
                   required
                   placeholder="e.g., Mayong Mistmoore, Oasis of Marr, Short Sword of Ykesha"
                   value={loreSearch}
                   onChange={(e) => setLoreSearch(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
+                  className="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono shadow-inner transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={loreLoading || !loreSearch.trim()}
-                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-4 py-2 text-xs uppercase tracking-wide rounded cursor-pointer disabled:opacity-40 flex items-center gap-1.5 transition-all font-mono"
+                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-6 py-3 text-xs uppercase tracking-widest rounded-xl cursor-pointer disabled:opacity-40 flex items-center gap-2 transition-all font-mono shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {loreLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
@@ -3360,18 +3718,20 @@ export default function App() {
 
               {/* Display lore result */}
               {loreResponse && (
-                <div className="bg-slate-950 rounded p-4 border border-slate-800/80 space-y-3 relative font-serif leading-relaxed">
+                <div className="bg-slate-950/60 rounded-xl p-6 border border-slate-700/50 space-y-4 relative font-serif leading-relaxed shadow-inner">
                   {loreLoading && (
-                    <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center gap-2 rounded">
-                      <Loader2 className="h-8 w-8 text-amber-500 animate-spin" />
-                      <span className="text-xs text-slate-400 font-mono">Сборка архивных хроник магии...</span>
+                    <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 rounded-xl z-20">
+                      <Loader2 className="h-8 w-8 text-amber-500 animate-spin drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]" />
+                      <span className="text-xs text-slate-300 font-mono uppercase tracking-widest font-bold">Сборка архивных хроник магии...</span>
                     </div>
                   )}
 
-                  <h4 className="text-amber-400 font-bold text-base border-b border-slate-850 pb-1 font-serif flex items-center gap-1">
+                  <h4 className="text-amber-400 font-black text-xl border-b border-amber-500/20 pb-3 font-serif flex items-center gap-2 drop-shadow-sm">
                     📖 Летописи хроники: {loreResponse.title}
                   </h4>
-                  <p className="text-xs text-slate-300 whitespace-pre-line indent-4">{loreResponse.text}</p>
+                  <div className="text-sm text-slate-300 whitespace-pre-line leading-loose pr-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                    {loreResponse.text}
+                  </div>
                 </div>
               )}
             </div>
@@ -3379,32 +3739,42 @@ export default function App() {
 
           {/* TAB 3: Active Quests Tab */}
           {selectedTab === 'quests' && character && (
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-3">
+            <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-xl space-y-6 animate-fade-in relative overflow-hidden group/quests min-h-[500px]">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-[80px] pointer-events-none group-hover/quests:bg-amber-500/10 transition-colors duration-1000" />
+              
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-700/50 pb-4 relative z-10">
                 <div>
-                  <h3 className="font-serif text-lg font-bold text-white flex items-center gap-1.5">
-                    <Database className="h-5 w-5 text-amber-500" />
+                  <h3 className="font-sans text-2xl font-black tracking-tight text-white flex items-center gap-2 drop-shadow-sm">
+                    <Database className="h-6 w-6 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
                     Летопись Героя (Задания)
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1">Отслеживайте свои великие свершения и побочные миссии.</p>
+                  <p className="text-xs text-slate-400 mt-2 font-medium">Отслеживайте свои великие свершения и побочные миссии.</p>
                 </div>
                 
-                <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+                <div className="flex bg-slate-950/80 p-1 rounded-xl border border-slate-700/80 shadow-inner">
                   <button
                     onClick={() => setQuestSubTab('msq')}
-                    className={`px-4 py-1.5 rounded text-xs font-mono font-bold uppercase transition-all cursor-pointer ${
-                      questSubTab === 'msq' ? 'bg-amber-600 text-slate-900' : 'text-slate-400 hover:text-white'
+                    className={`px-4 py-2 rounded-lg text-xs font-mono font-bold uppercase transition-all cursor-pointer ${
+                      questSubTab === 'msq' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'
                     }`}
                   >
                     Главный Сюжет (MSQ)
                   </button>
                   <button
                     onClick={() => setQuestSubTab('side')}
-                    className={`px-4 py-1.5 rounded text-xs font-mono font-bold uppercase transition-all cursor-pointer ${
-                      questSubTab === 'side' ? 'bg-amber-600 text-slate-900' : 'text-slate-400 hover:text-white'
+                    className={`px-4 py-2 rounded-lg text-xs font-mono font-bold uppercase transition-all cursor-pointer ${
+                      questSubTab === 'side' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'
                     }`}
                   >
                     Побочные (Гильдия)
+                  </button>
+                  <button
+                    onClick={() => setQuestSubTab('ai')}
+                    className={`px-4 py-2 rounded-lg text-xs font-mono font-bold uppercase transition-all cursor-pointer flex items-center gap-2 ${
+                      questSubTab === 'ai' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <BrainCircuit className="w-3.5 h-3.5" /> ИИ Динамика
                   </button>
                 </div>
               </div>
@@ -3568,28 +3938,34 @@ export default function App() {
                 )}
               </>
               )}
+
+              {questSubTab === 'ai' && (
+                <DynamicQuests character={character} addQuest={handleAcceptDynamicQuest} zone={activeZone.name} />
+              )}
             </div>
           )}
 
           {/* TAB 4: Trade Tunnel Merchant Store */}
           {selectedTab === 'merchant' && (
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
-              <div className="border-b border-slate-800 pb-3">
-                <h3 className="font-serif text-lg font-bold text-white flex items-center gap-1.5">
-                  <ShoppingCart className="h-5 w-5 text-amber-500" />
+            <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-xl space-y-6 animate-fade-in relative overflow-hidden group/merchant min-h-[500px]">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-[80px] pointer-events-none group-hover/merchant:bg-amber-500/10 transition-colors duration-1000" />
+              
+              <div className="border-b border-slate-700/50 pb-4 relative z-10">
+                <h3 className="font-sans text-2xl font-black tracking-tight text-white flex items-center gap-2 drop-shadow-sm">
+                  <ShoppingCart className="h-6 w-6 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
                   Торговец в Туннеле Восточных Степей
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">Покупайте редкое оружие и тяжелую броню, или продавайте добытые трофеи за золото.</p>
+                <p className="text-xs text-slate-400 mt-2 font-medium max-w-xl leading-relaxed">Покупайте редкое оружие и тяжелую броню, или продавайте добытые трофеи за золото.</p>
               </div>
 
               {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-3 bg-slate-950 p-3 rounded border border-slate-800">
-                <div className="flex-1 space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider block">Редкость (Rarity)</label>
+              <div className="flex flex-col sm:flex-row gap-4 bg-slate-950/80 p-4 rounded-xl border border-slate-700/80 shadow-inner relative z-10">
+                <div className="flex-1 space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-widest block drop-shadow-sm">Редкость (Rarity)</label>
                   <select 
                     value={merchantFilterRarity}
                     onChange={(e) => setMerchantFilterRarity(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs px-2 py-1.5 rounded outline-none focus:border-amber-500"
+                    className="w-full bg-slate-900 border border-slate-700/80 text-slate-200 text-sm px-3 py-2 rounded-lg outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 font-medium transition-all shadow-sm"
                   >
                     <option value="all">Все (All)</option>
                     <option value="common">Обычный (Common)</option>
@@ -3599,12 +3975,12 @@ export default function App() {
                   </select>
                 </div>
                 
-                <div className="flex-1 space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-500 font-mono tracking-wider block">Класс (Class)</label>
+                <div className="flex-1 space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-widest block drop-shadow-sm">Класс (Class)</label>
                   <select 
                     value={merchantFilterClass}
                     onChange={(e) => setMerchantFilterClass(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs px-2 py-1.5 rounded outline-none focus:border-amber-500"
+                    className="w-full bg-slate-900 border border-slate-700/80 text-slate-200 text-sm px-3 py-2 rounded-lg outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 font-medium transition-all shadow-sm"
                   >
                     <option value="all">Все Классы</option>
                     <option value="Warrior">Warrior</option>
@@ -3625,7 +4001,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 relative z-10">
                 {COMMON_TEMPLATES.merchantItems
                   .filter(item => {
                     if (merchantFilterRarity !== 'all' && item.rarity !== merchantFilterRarity) return false;
@@ -3633,44 +4009,49 @@ export default function App() {
                     return true;
                   })
                   .map((item) => (
-                  <div key={item.id} className="bg-slate-950 border border-slate-800 rounded p-3.5 flex flex-col justify-between space-y-3">
+                  <div key={item.id} className="bg-slate-900/60 border border-slate-700/50 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm hover:border-slate-600 transition-colors">
                     <div>
-                      <div className="flex justify-between items-start gap-2">
-                        <span className={`font-sans font-bold text-sm ${
-                          item.rarity === 'epic' ? 'text-amber-400' : item.rarity === 'rare' ? 'text-blue-400' : 'text-slate-200'
+                      <div className="flex justify-between items-start gap-3">
+                        <span className={`font-sans font-bold text-base tracking-tight ${
+                          item.rarity === 'epic' ? 'text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]' 
+                            : item.rarity === 'rare' ? 'text-blue-400' 
+                            : 'text-slate-200'
                         }`}>
                           {item.name}
                         </span>
                         
-                        <span className="text-[10px] font-mono capitalize text-slate-500 font-bold">{item.slot} slot</span>
+                        <span className="text-[10px] font-mono uppercase bg-slate-950/60 px-2 py-1 rounded text-slate-400 font-bold border border-slate-800">{item.slot} slot</span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-1 font-serif leading-tight">{item.description}</p>
+                      <p className="text-xs text-slate-400 mt-2 font-serif leading-relaxed line-clamp-2">{item.description}</p>
                       
                       {/* Stats list */}
-                      <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-amber-500/80 mt-1.5 border-b border-slate-900 pb-1.5">
-                        {item.stats.str && <span>STR +{item.stats.str}</span>}
-                        {item.stats.sta && <span>STA +{item.stats.sta}</span>}
-                        {item.stats.agi && <span>AGI +{item.stats.agi}</span>}
-                        {item.stats.mana && <span>Mana +{item.stats.mana}</span>}
-                        {item.stats.hp && <span>HP +{item.stats.hp}</span>}
-                        {item.stats.ac && <span>AC +{item.stats.ac}</span>}
+                      <div className="flex flex-wrap gap-2 text-[10px] font-mono text-amber-500/90 mt-3 border-b border-slate-700/50 pb-3">
+                        {item.stats.str && <span className="bg-amber-500/10 px-1.5 py-0.5 rounded">STR +{item.stats.str}</span>}
+                        {item.stats.sta && <span className="bg-amber-500/10 px-1.5 py-0.5 rounded">STA +{item.stats.sta}</span>}
+                        {item.stats.agi && <span className="bg-amber-500/10 px-1.5 py-0.5 rounded">AGI +{item.stats.agi}</span>}
+                        {item.stats.mana && <span className="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">Mana +{item.stats.mana}</span>}
+                        {item.stats.hp && <span className="bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded">HP +{item.stats.hp}</span>}
+                        {item.stats.ac && <span className="bg-slate-500/20 text-slate-300 px-1.5 py-0.5 rounded">AC +{item.stats.ac}</span>}
                       </div>
 
                       {/* Class list */}
-                      <div className="mt-1.5">
-                        <span className="text-[9px] font-mono text-slate-500">
-                          {item.allowedClasses ? `Классы: ${item.allowedClasses.join(', ')}` : 'Для всех классов'}
+                      <div className="mt-2.5">
+                        <span className="text-[9px] font-mono text-slate-500 uppercase font-bold tracking-wider">
+                          {item.allowedClasses ? `Classes: ${item.allowedClasses.join(', ')}` : 'ALL CLASSES'}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center border-t border-slate-900 pt-2 text-xs">
-                      <span className="font-mono text-amber-400 font-bold">{item.price} gold coins</span>
+                    <div className="flex justify-between items-center border-t border-slate-700/50 pt-3">
+                      <span className="font-mono text-amber-400 font-black text-sm flex items-center gap-1.5">
+                        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-amber-300 to-yellow-600 border border-yellow-200/50 shadow-inner" />
+                        {item.price} gold
+                      </span>
                       <button
                         onClick={() => handlePurchaseItem(item)}
-                        className="bg-slate-850 hover:bg-amber-500 hover:text-slate-950 font-bold px-3 py-1 border border-slate-700 hover:border-amber-400 rounded text-xs transition-colors cursor-pointer text-amber-300"
+                        className="bg-slate-800 hover:bg-amber-500 text-amber-400 hover:text-slate-950 font-black px-4 py-2 border border-slate-600 hover:border-amber-400 rounded-lg text-xs transition-all cursor-pointer uppercase tracking-widest shadow-sm hover:scale-[1.02] active:scale-[0.98]"
                       >
-                        Purchase
+                        Buy
                       </button>
                     </div>
                   </div>
@@ -3700,16 +4081,34 @@ export default function App() {
                     <div key={item.id} className="bg-slate-950 border border-slate-805 p-3 rounded-lg flex items-center justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-slate-200 truncate">{item.name}</span>
+                          <span className="font-bold text-sm text-slate-200 truncate">
+                            {item.upgradeLevel ? `+${item.upgradeLevel} ` : ''}{item.name}
+                          </span>
                           <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded uppercase font-bold shrink-0 ${
-                            item.rarity === 'epic' ? 'bg-amber-950 text-amber-400' : item.rarity === 'rare' ? 'bg-blue-950 text-blue-400' : 'bg-slate-900 text-slate-400'
+                            item.rarity === 'legendary' ? 'bg-orange-950 text-orange-400' :
+                            item.rarity === 'epic' ? 'bg-purple-950 text-purple-400' : 
+                            item.rarity === 'rare' ? 'bg-blue-950 text-blue-400' : 
+                            item.rarity === 'uncommon' ? 'bg-green-950 text-green-400' :
+                            'bg-slate-900 text-slate-400'
                           }`}>
-                            {item.rarity === 'epic' ? 'эпик' : item.rarity === 'rare' ? 'редкий' : 'обычн'}
+                            {item.rarity}
                           </span>
                         </div>
                         <p className="text-xs text-slate-400 leading-tight block truncate mt-0.5">{item.description}</p>
-                        
-                        {/* Stats list */}
+                        {item.sockets && item.sockets.length > 0 && (
+                          <div className="flex gap-1 mt-1 text-[10px] text-emerald-500 font-mono italic">
+                            Сокеты: {item.sockets.filter(s => s.rune).length}/{item.sockets.length} (заполнено)
+                          </div>
+                        )}
+                        {item.modifiers && item.modifiers.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1 text-[9px]">
+                            {item.modifiers.map((mod, idx) => (
+                              <span key={idx} className="bg-slate-900 text-indigo-400 px-1 py-0.5 border border-indigo-900/30 rounded">{mod}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
                         <div className="flex flex-wrap gap-1.5 text-[9px] font-mono text-amber-500/80 mt-1">
                           {item.stats.str && <span>СИЛ +{item.stats.str}</span>}
                           {item.stats.sta && <span>ВЫН +{item.stats.sta}</span>}
@@ -3755,6 +4154,8 @@ export default function App() {
                 <CosmeticSalonTransmog
                   character={character}
                   onUpdateCharacter={saveCharacter}
+                  triggerAlert={triggerAlert}
+                  notifyPlayerImpact={notifyPlayerImpact}
                 />
               </div>
             </div>
@@ -5303,6 +5704,16 @@ export default function App() {
             </div>
           )}
 
+          {selectedTab === 'progression' && character && (
+            <div className="space-y-6 animate-fade-in w-full">
+              <ProgressionTalentsFates 
+                character={character} 
+                onUpdateCharacter={saveCharacter} 
+                triggerAlert={triggerAlert} 
+              />
+            </div>
+          )}
+
           {selectedTab === 'dungeons' && character && (
             <div className="space-y-6 animate-fade-in w-full">
               <DungeonFinderInstance
@@ -5315,11 +5726,61 @@ export default function App() {
 
           {selectedTab === 'crafting-market' && character && (
             <div className="space-y-6 animate-fade-in w-full">
-              <GatheringCraftingEngine
-                character={character}
-                onUpdateCharacter={saveCharacter}
-                triggerAlert={triggerAlert}
-              />
+              <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 w-fit">
+                {(['craft', 'enhance', 'reforge', 'sockets', 'salvage'] as const).map(sub => (
+                  <button
+                    key={sub}
+                    onClick={() => setCraftSubTab(sub)}
+                    className={`px-4 py-2 text-[10px] font-bold uppercase rounded flex items-center gap-2 transition-all ${
+                      craftSubTab === sub 
+                        ? 'bg-amber-600 text-slate-900 shadow-[0_0_10px_rgba(217,119,6,0.5)]' 
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    }`}
+                  >
+                    {sub === 'craft' ? <><Hammer className="w-4 h-4"/> Создание</> : 
+                     sub === 'enhance' ? <><ArrowUpCircle className="w-4 h-4"/> Улучшение</> :
+                     sub === 'reforge' ? <><Wand2 className="w-4 h-4"/> Перековка</> :
+                     sub === 'sockets' ? <><Hexagon className="w-4 h-4"/> Сокеты</> :
+                     <><Trash2 className="w-4 h-4"/> Разбор</>}
+                  </button>
+                ))}
+              </div>
+
+              {craftSubTab === 'craft' && (
+                <GatheringCraftingEngine
+                  character={character}
+                  onUpdateCharacter={saveCharacter}
+                  triggerAlert={triggerAlert}
+                />
+              )}
+              {craftSubTab === 'enhance' && (
+                <EquipmentEnhancement
+                  character={character}
+                  onUpdateCharacter={saveCharacter}
+                  triggerAlert={triggerAlert}
+                />
+              )}
+              {craftSubTab === 'reforge' && (
+                <EquipmentReforge
+                  character={character}
+                  onUpdateCharacter={saveCharacter}
+                  triggerAlert={triggerAlert}
+                />
+              )}
+              {craftSubTab === 'sockets' && (
+                <EquipmentSockets
+                  character={character}
+                  onUpdateCharacter={saveCharacter}
+                  triggerAlert={triggerAlert}
+                />
+              )}
+              {craftSubTab === 'salvage' && (
+                <EquipmentSalvage
+                  character={character}
+                  onUpdateCharacter={saveCharacter}
+                  triggerAlert={triggerAlert}
+                />
+              )}
             </div>
           )}
 
@@ -5333,351 +5794,42 @@ export default function App() {
             </div>
           )}
 
+          {selectedTab === 'companions' && character && (
+            <div className="space-y-6 animate-fade-in w-full">
+              <CompanionsCamp
+                character={character}
+                onUpdateCharacter={saveCharacter}
+                triggerAlert={triggerAlert}
+                notifyPlayerImpact={notifyPlayerImpact}
+              />
+            </div>
+          )}
+
+          {selectedTab === 'arena' && character && (
+            <div className="space-y-6 animate-fade-in w-full">
+               <PvPArena
+                 character={character}
+                 onUpdateCharacter={saveCharacter}
+                 triggerAlert={triggerAlert}
+               />
+            </div>
+          )}
+
           {selectedTab === 'admin' && user?.isAdmin && (
             <div className="space-y-6 animate-fade-in w-full col-span-1 lg:col-span-4">
-              <div className="bg-gradient-to-r from-red-950/80 to-slate-900 border border-red-800/60 rounded-xl p-5 shadow-lg relative overflow-hidden">
-                <div className="absolute inset-y-0 right-0 w-64 bg-gradient-to-l from-red-950/10 to-transparent pointer-events-none" />
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-                      <h4 className="font-serif text-xl font-black text-slate-100 uppercase tracking-widest text-shadow">
-                        Панель Директора Этернии (Reggy)
-                      </h4>
-                    </div>
-                    <p className="text-xs text-slate-400 font-mono">
-                      Административная консоль управления вселенной «Открытый мир» • (Пароль Andron7691)
-                    </p>
-                  </div>
-                  <div className="bg-slate-950/80 border border-red-900/60 rounded-lg p-3 font-mono text-[10px] text-red-400 space-y-0.5">
-                    <div>СЕССИЯ: РЕЖИМ РАЗРАБОТЧИКА АКТИВЕН</div>
-                    <div>КУРАТОР: {user.username} (ГЛ. АДМИНИСТРАТОР)</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Grid with Operations */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* 1. Настройки Сервера */}
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
-                  <h5 className="font-mono text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-1.5">
-                    <Server className="h-4 w-4 text-red-500" />
-                    1. ПАРАМЕТРЫ СЕРВЕРА
-                  </h5>
-
-                  <div className="space-y-4 font-mono text-xs">
-                    <div>
-                      <label className="block text-slate-400 mb-1.5 font-bold">СОСТОЯНИЕ МИРА:</label>
-                      <select 
-                        value={serverStateSettings.status}
-                        onChange={(e) => setServerStateSettings({...serverStateSettings, status: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-300 font-mono text-xs"
-                      >
-                        <option value="online">В сети (Обычный запуск)</option>
-                        <option value="maintenance">Технические работы (Ограничить вход)</option>
-                        <option value="event">Праздничный ивент (Бонусы активны)</option>
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-slate-400 mb-1.5 font-bold">УМНОЖИТЕЛЬ XP:</label>
-                        <select 
-                          value={serverStateSettings.multiplierXP}
-                          onChange={(e) => setServerStateSettings({...serverStateSettings, multiplierXP: Number(e.target.value)})}
-                          className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-300 font-mono text-xs"
-                        >
-                          <option value="1.0">x1.0 (Стандарт)</option>
-                          <option value="2.0">x2.0 (Двойной опыт)</option>
-                          <option value="3.0">x3.0 (Утроенный опыт!)</option>
-                          <option value="5.0">x5.0 (Сумасшедшая прокачка!)</option>
-                          <option value="10.0">x10.0 (Турбо-режим)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-slate-400 mb-1.5 font-bold">УМНОЖИТЕЛЬ ЗОЛОТА:</label>
-                        <select 
-                          value={serverStateSettings.multiplierGold}
-                          onChange={(e) => setServerStateSettings({...serverStateSettings, multiplierGold: Number(e.target.value)})}
-                          className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-300 font-mono text-xs"
-                        >
-                          <option value="1.0">x1.0 (Стандарт)</option>
-                          <option value="2.0">x2.0 (Двойное золото)</option>
-                          <option value="3.0">x3.0 (Золотой лихорадка!)</option>
-                          <option value="5.0">x5.0 (Королевская щедрость!)</option>
-                          <option value="10.0">x10.0 (Сокровищница открыта)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-400 mb-1.5 font-bold">АКТИВНОЕ ИВЕНТ-СОБЫТИЕ:</label>
-                      <input 
-                        type="text"
-                        value={serverStateSettings.activeEvent}
-                        onChange={(e) => setServerStateSettings({...serverStateSettings, activeEvent: e.target.value})}
-                        placeholder="Обычный режим"
-                        className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-300 font-mono text-xs"
-                      />
-                    </div>
-
-                    <button 
-                      onClick={async () => {
-                        try {
-                          const res = await fetch('/api/admin/server-settings', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(serverStateSettings)
-                          });
-                          if (res.ok) {
-                            triggerAlert('Параметры игрового мира успешно применены ко всем игрокам!', 'success');
-                            fetchServerSettings();
-                          }
-                        } catch (err) {
-                          triggerAlert('Ошибка сохранения параметров сервера.', 'error');
-                        }
-                      }}
-                      className="w-full bg-red-650 hover:bg-red-650/80 text-white rounded font-black py-2.5 text-xs uppercase cursor-pointer transition-all border border-red-500 hover:border-red-400"
-                    >
-                      Применить и Объявить в Мире
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. Модерация и связь */}
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
-                  <h5 className="font-mono text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-1.5">
-                    <Activity className="h-4 w-4 text-red-500" />
-                    2. МОДЕРАЦИЯ И СВЯЗЬ
-                  </h5>
-
-                  <div className="space-y-4 font-mono text-xs">
-                    <div>
-                      <label className="block text-slate-400 mb-1.5 font-bold">ОПЕРАЦИИ ЧАТА:</label>
-                      <button 
-                        onClick={async () => {
-                          if (confirm('Очистить весь мировой чат?')) {
-                            try {
-                              const res = await fetch('/api/admin/clear-chat', { method: 'POST' });
-                              if (res.ok) {
-                                triggerAlert('Мировой чат успешно очищен!', 'success');
-                              }
-                            } catch (e) {
-                              triggerAlert('Не удалось очистить чат.', 'error');
-                            }
-                          }
-                        }}
-                        className="w-full bg-slate-950 hover:bg-slate-900 border border-red-900/40 text-red-400 font-bold py-2 rounded text-xs cursor-pointer transition-all"
-                      >
-                        ⚠️ Очистить Мировой Чат для Всех
-                      </button>
-                    </div>
-
-                    <div className="border-t border-slate-800/60 pt-3">
-                      <label className="block text-slate-400 mb-1.5 font-bold">ГЛОБАЛЬНОЕ СИСТЕМНОЕ ОБЪЯВЛЕНИЕ (SHOUT):</label>
-                      <textarea 
-                        value={adminAnnouncement}
-                        onChange={(e) => setAdminAnnouncement(e.target.value)}
-                        placeholder="Введите срочное сообщение, которое увидят абсолютно все искатели приключений во всех локациях..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded p-2.5 h-20 text-slate-300 font-mono text-xs focus:outline-none focus:border-red-500"
-                      />
-                      <button 
-                        onClick={async () => {
-                          if (!adminAnnouncement.trim()) return;
-                          try {
-                            const res = await fetch('/api/admin/announce', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ text: adminAnnouncement.trim() })
-                            });
-                            if (res.ok) {
-                              setAdminAnnouncement('');
-                              triggerAlert('Объявление вещания разослано в игровой мир!', 'success');
-                            }
-                          } catch (err) {
-                            triggerAlert('Не удалось оправить глобальное объявление.', 'error');
-                          }
-                        }}
-                        className="mt-2 w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2 rounded text-xs uppercase cursor-pointer"
-                      >
-                        📢 Сделать Глобальный Анонс
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Администраторские Читы (Команды Творца) */}
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
-                  <h5 className="font-mono text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-1.5">
-                    <Wand2 className="h-4 w-4 text-amber-550" />
-                    3. ЧИТ-КОДЫ РАЗРАБОТКИ (ДЛЯ СЕБЯ)
-                  </h5>
-
-                  <div className="space-y-3 font-mono text-xs">
-                    <div className="grid grid-cols-2 gap-2">
-                      <button 
-                        onClick={() => {
-                          if (!character) return;
-                          const updated = { ...character, gold: character.gold + 500 };
-                          saveCharacter(updated);
-                          triggerAlert('Творец начислил себе +500 Золота!', 'success');
-                        }}
-                        className="bg-amber-950/20 hover:bg-amber-900/30 border border-amber-600/30 text-amber-300 py-2.5 px-3 rounded text-left block cursor-pointer transition-colors"
-                      >
-                        <div className="font-bold">+500g Золота</div>
-                        <div className="text-[9px] text-slate-400 font-normal">Мгновенное обогащение</div>
-                      </button>
-
-                      <button 
-                        onClick={() => {
-                          if (!character) return;
-                          const updated = { ...character, gold: character.gold + 5000 };
-                          saveCharacter(updated);
-                          triggerAlert('Творец начислил себе +5000 Золота!', 'success');
-                        }}
-                        className="bg-amber-950/45 hover:bg-amber-900/60 border border-amber-550 text-amber-200 py-2.5 px-3 rounded text-left block cursor-pointer transition-colors"
-                      >
-                        <div className="font-bold">+5000g Золота</div>
-                        <div className="text-[9px] text-slate-400 font-normal">Королевский грант</div>
-                      </button>
-
-                      <button 
-                        onClick={() => {
-                          if (!character) return;
-                          const nextLvl = character.level + 1;
-                          const updated = {
-                            ...character,
-                            level: nextLvl,
-                            maxHp: 100 + nextLvl * 15,
-                            maxMana: 80 + nextLvl * 12,
-                            hp: 100 + nextLvl * 15,
-                            mana: 80 + nextLvl * 12,
-                            exp: 0,
-                            expToNextLevel: nextLvl * 1200
-                          };
-                          saveCharacter(updated);
-                          triggerAlert(`Уровень повышен до ${nextLvl}! (Ding!)`, 'success');
-                        }}
-                        className="bg-purple-950/20 hover:bg-purple-900/30 border border-purple-800/30 text-purple-300 py-2.5 px-3 rounded text-left block cursor-pointer transition-colors"
-                      >
-                        <div className="font-bold">Повысить Уровень (+1)</div>
-                        <div className="text-[9px] text-slate-400 font-normal">Получить уровень бога</div>
-                      </button>
-
-                      <button 
-                        onClick={() => {
-                          if (!character) return;
-                          const weapon: Item = {
-                            id: `admin-wep-${Date.now()}`,
-                            name: '🔥 Эпический Посох Власти Регги',
-                            slot: 'primary',
-                            description: 'Легендарное оружие, создающее разломы планов. Излучает энергию Этернии.',
-                            price: 5000,
-                            rarity: 'epic',
-                            stats: { str: 25, sta: 30, int: 50, wis: 40, agi: 20 }
-                          };
-                          const chest: Item = {
-                            id: `admin-chest-${Date.now()}`,
-                            name: '🛡️ Кираса Создателя Вселенной Андрона',
-                            slot: 'chest',
-                            description: 'Непробиваемая броня из чистой субстанции звёзд и программного кода.',
-                            price: 8888,
-                            rarity: 'epic',
-                            stats: { str: 45, sta: 60, int: 20, wis: 25, agi: 30 }
-                          };
-                          const updated = {
-                            ...character,
-                            inventory: [...character.inventory, weapon, chest]
-                          };
-                          saveCharacter(updated);
-                          triggerAlert('Эпический сет перенесен на вашего персонажа!', 'success');
-                        }}
-                        className="bg-red-950/20 hover:bg-red-900/30 border border-red-800/30 text-red-300 py-2.5 px-3 rounded text-left block cursor-pointer transition-colors"
-                      >
-                        <div className="font-bold">Эпический Сет Регги</div>
-                        <div className="text-[9px] text-slate-400 font-normal">Имба комплектация</div>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Безопасность и Реестр Пользователей */}
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
-                  <h5 className="font-mono text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-1.5">
-                    <User className="h-4 w-4 text-red-500" />
-                    4. БАЗА ДАННЫХ ПЕРСОНАЖЕЙ ({adminUsers.length})
-                  </h5>
-
-                  <div className="overflow-y-auto max-h-[220px] pr-1 space-y-2">
-                    {adminUsers.length === 0 ? (
-                      <div className="text-center py-6 text-slate-550 font-mono text-xs">
-                        Нет подключенных учетных записей или идет загрузка...
-                      </div>
-                    ) : (
-                      adminUsers.map((u) => (
-                        <div key={u.username} className="bg-slate-950 p-2.5 rounded border border-slate-850 flex items-center justify-between text-xs font-mono">
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-slate-200">{u.username}</span>
-                              {u.isAdmin && <span className="bg-red-900/60 border border-red-700 text-red-300 text-[8px] px-1 rounded uppercase tracking-wider">ADMIN</span>}
-                              {u.banned && <span className="bg-rose-950 border border-rose-800 text-rose-400 text-[8px] px-1 rounded uppercase tracking-wider">BANNED</span>}
-                            </div>
-                            <span className="text-[10px] text-slate-500">
-                              Статус: {u.banned ? 'Заблокирован' : 'Может войти под присягой'}
-                            </span>
-                          </div>
-
-                          <div className="flex gap-1.5">
-                            {u.username !== 'Reggy' ? (
-                              <button
-                                onClick={async () => {
-                                  const actionText = u.banned ? 'РАЗБЛОКИРОВАТЬ' : 'ЗАБЛОКИРОВАТЬ';
-                                  if (confirm(`Вы уверены, что хотите ${actionText} персонажа ${u.username}?`)) {
-                                    try {
-                                      const res = await fetch('/api/admin/user-ban', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ username: u.username, ban: !u.banned })
-                                      });
-                                      if (res.ok) {
-                                        triggerAlert(`Пользователь ${u.username} успешно обновлен!`, 'success');
-                                        const r = await fetch('/api/admin/users');
-                                        if (r.ok) {
-                                          const d = await r.json();
-                                          setAdminUsers(d.users || []);
-                                        }
-                                      } else {
-                                        const errData = await res.json();
-                                        triggerAlert(errData.error || 'Ошибка бана', 'error');
-                                      }
-                                    } catch (e) {
-                                      triggerAlert('Ошибка соединения с базой.', 'error');
-                                    }
-                                  }
-                                }}
-                                className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                                  u.banned 
-                                  ? 'bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800' 
-                                  : 'bg-rose-950 hover:bg-rose-900 text-rose-400 border border-rose-800'
-                                }`}
-                              >
-                                {u.banned ? 'Разбанить' : 'Забанить'}
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-slate-500 italic bg-slate-900 border border-slate-800 px-2 py-0.5 rounded">
-                                Иммунитет
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-              </div>
+              <AdminPanel 
+                user={user}
+                character={character}
+                saveCharacter={saveCharacter}
+                triggerAlert={triggerAlert}
+                serverStateSettings={serverStateSettings}
+                setServerStateSettings={setServerStateSettings}
+                fetchServerSettings={fetchServerSettings}
+                adminUsers={adminUsers}
+                setAdminUsers={setAdminUsers}
+                adminAnnouncement={adminAnnouncement}
+                setAdminAnnouncement={setAdminAnnouncement}
+              />
             </div>
           )}
 
