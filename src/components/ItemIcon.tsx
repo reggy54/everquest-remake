@@ -37,7 +37,7 @@ export function getItemIcon(item: Item | undefined | null, size: number = 24) {
   if (item.slot === 'chest') return <Shirt size={size} />;
   if (item.slot === 'legs') return <Shirt size={size} className="rotate-180" />;
   if (item.slot === 'feet') return <Box size={size} />;
-  if (item.slot === 'accessory') return <Gem size={size} />;
+  if (item.slot === 'amulet' || item.slot === 'ring1' || item.slot === 'ring2') return <Gem size={size} />;
   
   if (item.slot === 'consumable') {
     if (nameLow.includes('food') || nameLow.includes('мясо') || nameLow.includes('суп')) return <Drumstick size={size} />; 

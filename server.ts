@@ -319,6 +319,7 @@ Format return JSON:
 
       const parsed = JSON.parse(response.text || '{}');
       if (parsed.answers && Array.isArray(parsed.answers)) {
+        (req as any).answers = [];
         for (const answer of parsed.answers) {
           // Add random slight delay or respond immediately
           addChatMessage({
@@ -326,6 +327,7 @@ Format return JSON:
             channel: answer.channel || 'OOC',
             text: answer.text,
           });
+          (req as any).answers.push(answer);
         }
       }
     } catch (err: any) {

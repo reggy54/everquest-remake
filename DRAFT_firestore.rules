@@ -1,0 +1,105 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ------------------------------------------------------------------------
+    // GLOBALS / HELPER FUNCTIONS
+    // ------------------------------------------------------------------------
+
+    // Global Safety Net: Default-deny all by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // ------------------------------------------------------------------------
+    // USERS COLLECTION
+    // ------------------------------------------------------------------------
+    function isValidUser(data) {
+        return data.keys().hasAll(['email', 'createdAt']) && data.keys().size() == 2
+            && data.email is string && data.email.size() <= 128
+            && data.createdAt is int;
+    }
+
+    match /users/{userId} {
+        // Read: A verified user can read their own profile
+        allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+        
+        // No blanket list on users
+        allow list: if false;
+
+        allow create: if isSignedIn() 
+             && isValidId(userId) 
+             && request.auth.uid == userId
+             && isValidUser(incoming())
+             && incoming().email == request.auth.token.email
+             && incoming().createdAt == request.time.toMillis();
+             
+        allow update: if isSignedIn()
+            && isValidId(userId)
+            && request.auth.uid == userId
+             // Because it's an update, we assume it's valid if nothing really changed, but size keys might be different 
+             // We'll enforce no updates here as it's just profile initialization
+            && incoming().diff(existing()).affectedKeys().size() == 0;
+            
+        // No delete
+        allow delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // CHARACTERS COLLECTION
+    // ------------------------------------------------------------------------
+    function isValidCharacter(data) {
+        return data.keys().hasAll(['userId', 'name', 'class', 'race', 'createdAt', 'updatedAt']) 
+            && data.userId is string && data.userId.size() <= 128
+            && data.name is string && data.name.size() <= 32 && data.name.size() > 0
+            && data.class is string && data.class.size() <= 32
+            && data.race is string && data.race.size() <= 32
+            && data.createdAt is int
+            && data.updatedAt is int;
+            // Equipment and inventory can be populated but are optional in this schema
+    }
+
+    match /characters/{characterId} {
+        allow get: if isSignedIn() && isValidId(characterId) && existing().userId == request.auth.uid;
+        // User can only list their own characters
+        allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+        allow create: if isSignedIn()
+             && isValidId(characterId)
+             && isValidCharacter(incoming())
+             // Cannot create a character without existing user profile?
+             && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             && incoming().userId == request.auth.uid // Identity Integrity
+             && incoming().createdAt == request.time.toMillis()
+             && incoming().updatedAt == request.time.toMillis();
+
+        allow update: if (
+            isSignedIn() && isValidId(characterId) 
+            && existing().userId == request.auth.uid
+            && incoming().userId == existing().userId
+            && incoming().createdAt == existing().createdAt 
+            && incoming().updatedAt == request.time.toMillis()
+            // We allow all fields to be modified (level up, exp, items) by the owner for this simple MMO case
+            // Normally this should be in actions, but in our system the client acts as the authoritative source
+        );
+
+        allow delete: if isSignedIn() && isValidId(characterId) && existing().userId == request.auth.uid;
+    }
+  }
+}

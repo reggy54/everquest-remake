@@ -289,6 +289,7 @@ export interface ChatMessage {
   channel: 'Say' | 'RP' | 'Party' | 'Guild' | 'World' | 'System' | 'OOC' | 'Auction' | 'Shout';
   text: string;
   timestamp: string;
+  createdAt?: number;
   class?: CharacterClass; // Optional details
   rpTone?: string;
 }

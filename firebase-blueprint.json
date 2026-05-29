@@ -1,0 +1,124 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile that owns characters",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "User's email"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp"
+        }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "Character": {
+      "title": "Character",
+      "description": "User's game character",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "class": {
+          "type": "string"
+        },
+        "race": {
+          "type": "string"
+        },
+        "level": {
+          "type": "number"
+        },
+        "experience": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp"
+        },
+        "updatedAt": {
+          "type": "number"
+        },
+        "equipment": {
+          "type": "object",
+           "description": "Current equipment payload JSON"
+        },
+        "inventory": {
+          "type": "array",
+           "description": "Current inventory array JSON"
+        }
+      },
+      "required": ["userId", "name", "class", "race", "createdAt", "updatedAt"]
+    },
+    "AuctionItem": {
+      "title": "Auction Item",
+      "description": "An item listed on the auction house",
+      "type": "object",
+      "properties": {
+        "sellerName": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "item": { "type": "object", "description": "The Item payload" },
+        "price": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["sellerName", "sellerId", "item", "price", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "Global chat message",
+      "type": "object",
+      "properties": {
+        "sender": { "type": "string" },
+        "userId": { "type": "string" },
+        "text": { "type": "string" },
+        "channel": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["sender", "userId", "text", "channel", "createdAt"]
+    },
+    "BankItem": {
+      "title": "Shared Bank Item",
+      "description": "An item deposited in the shared global bank",
+      "type": "object",
+      "properties": {
+        "item": { "type": "object", "description": "The Item payload" },
+        "depositorName": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["item", "depositorName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": {
+        "$ref": "User"
+      },
+      "description": "Public profile configuration"
+    },
+    "characters/{characterId}": {
+       "schema": {
+           "$ref": "Character"
+       },
+       "description": "The user's game character profile and attributes"
+    },
+    "auctions/{auctionId}": {
+      "schema": { "$ref": "AuctionItem" },
+      "description": "Active auction house listings"
+    },
+    "chat_messages/{messageId}": {
+      "schema": { "$ref": "ChatMessage" },
+      "description": "Global multiplayer chat"
+    },
+    "bank_items/{itemId}": {
+      "schema": { "$ref": "BankItem" },
+      "description": "Items in the globally shared bank"
+    }
+  }
+}

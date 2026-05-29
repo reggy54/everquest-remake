@@ -3,6 +3,8 @@ import { PlayerCharacter, Item, SlotType } from '../types';
 import { Search, Database, Vault, Package, ArrowRightLeft, MoveDown, Lock, Download } from 'lucide-react';
 import { ItemIconWrapper } from './ItemIcon';
 import { getCharacterAvatarUrl } from './AvatarIcon';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { collection, query, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 
 interface BankTabProps {
   character: PlayerCharacter;
@@ -30,6 +32,23 @@ export default function BankTab({ character, language, onUpdateCharacter, trigge
   const [bankTab, setBankTab] = useState<'main' | 'chest1' | 'chest2'>('main');
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredItem, setHoveredItem] = useState<Item | null>(null);
+  
+  // Real-time Global Bank State
+  const [globalBankItems, setGlobalBankItems] = useState<{ id: string, item: Item, depositorName: string }[]>([]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(query(collection(db, 'bank_items')), (snapshot) => {
+       const items = snapshot.docs.map(doc => ({
+           id: doc.id,
+           item: doc.data().item as Item,
+           depositorName: doc.data().depositorName as string
+       }));
+       setGlobalBankItems(items);
+    }, (error) => {
+       console.error("Bank Error: ", error);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const phrases = language === 'ru' ? NPC_RU : NPC_EN;
@@ -64,40 +83,60 @@ export default function BankTab({ character, language, onUpdateCharacter, trigge
     return names[slot] || slot;
   };
 
-  const bankItems = character.bank || [];
-  const maxBankSlots = character.bankSlots || 56;
-  const maxInvSlots = 50; // hardcoded as in CharacterSheet
+  const maxBankSlots = 560; // Huge shared bank
+  const maxInvSlots = 50;
 
-  const handleDeposit = (item: Item) => {
-    if (bankItems.length >= maxBankSlots) {
+  const handleDeposit = async (item: Item) => {
+    if (globalBankItems.length >= maxBankSlots) {
        triggerAlert(language === 'ru' ? 'В банке нет места!' : 'Bank is full!', 'error');
        return;
     }
+    
+    // Remove from local inventory
     const updatedChar = {
        ...character,
        inventory: character.inventory.filter(i => i.id !== item.id),
-       bank: [...bankItems, item]
     };
     onUpdateCharacter(updatedChar);
+
+    // Push to global bank
+    try {
+        await addDoc(collection(db, 'bank_items'), {
+           item: item,
+           depositorName: character.name,
+           createdAt: Date.now()
+        });
+    } catch(err) {
+        triggerAlert('Error depositing.', 'error');
+    }
   };
 
-  const handleWithdraw = (item: Item) => {
+  const handleWithdraw = async (bankRecord: { id: string, item: Item, depositorName: string }) => {
     if (character.inventory.length >= maxInvSlots) {
        triggerAlert(language === 'ru' ? 'Рюкзак переполнен!' : 'Inventory is full!', 'error');
        return;
     }
-    const updatedChar = {
-       ...character,
-       bank: bankItems.filter(i => i.id !== item.id),
-       inventory: [...character.inventory, item]
-    };
-    onUpdateCharacter(updatedChar);
+    
+    try {
+       // Claim from global bank
+       await deleteDoc(doc(db, 'bank_items', bankRecord.id));
+       
+       // Add to local inventory
+       const updatedChar = {
+          ...character,
+          inventory: [...character.inventory, bankRecord.item]
+       };
+       onUpdateCharacter(updatedChar);
+       triggerAlert(language === 'ru' ? `Получено: ${bankRecord.item.name}` : `Withdrawn: ${bankRecord.item.name}`, 'success');
+    } catch(err) {
+       triggerAlert('Someone else might have claimed it!', 'error');
+    }
   };
 
-  const currentTabItems = bankItems.filter(i => searchQuery ? i.name.toLowerCase().includes(searchQuery.toLowerCase()) : true);
+  const currentTabItems = globalBankItems.filter(record => searchQuery ? record.item.name.toLowerCase().includes(searchQuery.toLowerCase()) : true);
 
   // Generate grid placeholders
-  const bankGrid = Array.from({ length: maxBankSlots }).map((_, i) => currentTabItems[i] || null);
+  const bankGrid = Array.from({ length: Math.max(56, Math.ceil(currentTabItems.length / 8) * 8) }).map((_, i) => currentTabItems[i] || null);
 
   const leftSlots: SlotType[] = ['head', 'chest', 'hands', 'legs', 'feet'];
   const rightSlots: SlotType[] = ['primary', 'secondary', 'ring1', 'amulet'];
@@ -178,13 +217,15 @@ export default function BankTab({ character, language, onUpdateCharacter, trigge
              {/* Bank Grid */}
              <div className="flex-1 custom-scrollbar overflow-y-auto px-4 lg:px-8 pb-8">
                 <div className="grid grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-1.5 select-none auto-rows-max place-items-center">
-                   {bankGrid.map((item, index) => (
+                   {bankGrid.map((record, index) => {
+                      const item = record?.item;
+                      return (
                       <div 
                         key={index}
-                        onMouseEnter={() => setHoveredItem(item)}
+                        onMouseEnter={() => setHoveredItem(item || null)}
                         onMouseLeave={() => setHoveredItem(null)}
-                        onDoubleClick={() => item && handleWithdraw(item)}
-                        onClick={() => item && handleWithdraw(item)}
+                        onDoubleClick={() => record && handleWithdraw(record)}
+                        onClick={() => record && handleWithdraw(record)}
                         className={`w-12 h-12 md:w-14 md:h-14 bg-[#0f1219] border-2 rounded-sm relative cursor-pointer shadow-[inset_0_2px_6px_rgba(0,0,0,0.8)] flex items-center justify-center group overflow-hidden transition-all
                            ${item ? RarityColor(item.rarity) : 'border-[#1e293b] hover:border-[#334155]'}
                         `}
@@ -194,13 +235,16 @@ export default function BankTab({ character, language, onUpdateCharacter, trigge
                          <div className="absolute bottom-[1px] right-[1px] w-1 h-1 bg-[#475569]/30 rounded-full" />
                          
                          {item ? (
-                            <div className="w-[90%] h-[90%] flex items-center justify-center opacity-80 group-hover:scale-110 transition-transform duration-300">
+                            <div className="w-[90%] h-[90%] flex items-center justify-center opacity-80 group-hover:scale-110 transition-transform duration-300 relative">
                                <ItemIconWrapper item={item} size={24} />
                                {item.upgradeLevel && (
-                                  <div className="absolute bottom-0 right-0 text-[9px] font-bold text-white shadow-black drop-shadow-[1px_1px_0_#000] bg-black/60 px-0.5 rounded-tl">
+                                  <div className="absolute bottom-0 right-0 text-[10px] font-bold text-white shadow-black drop-shadow-[1px_1px_0_#000] bg-black/60 px-0.5 rounded-tl">
                                      +{item.upgradeLevel}
                                   </div>
                                )}
+                               <div className="absolute top-0 left-0 bg-black/60 text-[8px] text-white opacity-0 group-hover:opacity-100 px-1 truncate max-w-full">
+                                  {record.depositorName}
+                               </div>
                             </div>
                          ) : (
                             <div className="w-full h-full flex items-center justify-center opacity-10">
@@ -208,63 +252,33 @@ export default function BankTab({ character, language, onUpdateCharacter, trigge
                             </div>
                          )}
                       </div>
-                   ))}
+                   )})}
                 </div>
              </div>
              
              {/* Bottom Bank Panel */}
              <div className="bg-[#1b2233] border-t border-[#3a4863] p-4 flex gap-4 items-center justify-between">
                 <div className="text-[10px] text-[#64748b] font-mono flex flex-col">
-                   <span>ЗАПОЛНЕНО: <span className="text-[#a5b4fc]">{bankItems.length} / {maxBankSlots}</span></span>
+                   <span>ЗАПОЛНЕНО: <span className="text-[#a5b4fc]">{globalBankItems.length} / {maxBankSlots}</span></span>
                 </div>
                 <div className="flex gap-2">
                    <button 
                       onClick={() => {
-                         const sorted = [...bankItems].sort((a,b) => a.rarity.localeCompare(b.rarity) || a.name.localeCompare(b.name));
-                         onUpdateCharacter({ ...character, bank: sorted });
-                      }}
-                      className="bg-[#121620] border border-[#2b3548] text-[#94a3b8] hover:text-[#a5b4fc] text-[10px] md:text-xs font-bold px-2 md:px-3 py-1.5 uppercase rounded shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
-                   >
-                      {language === 'ru' ? 'Сортировка' : 'Sort'}
-                   </button>
-                   <button 
-                      onClick={() => {
-                         // Deposit all
-                         const spaceInBank = maxBankSlots - bankItems.length;
-                         if (spaceInBank === 0) return;
-                         const toDeposit = character.inventory.slice(0, spaceInBank);
-                         const remaining = character.inventory.slice(spaceInBank);
-                         onUpdateCharacter({ ...character, inventory: remaining, bank: [...bankItems, ...toDeposit] });
-                      }}
-                      className="bg-[#121620] border border-[#2b3548] text-[#94a3b8] hover:text-[#a5b4fc] text-[10px] md:text-xs font-bold px-2 md:px-3 py-1.5 uppercase rounded shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
-                   >
-                      {language === 'ru' ? 'Скинуть всё' : 'Deposit All'}
-                   </button>
-                   <button 
-                      onClick={() => {
-                         // Withdraw all
                          const spaceInInv = maxInvSlots - character.inventory.length;
                          if (spaceInInv === 0) return;
-                         const toWithdraw = bankItems.slice(0, spaceInInv);
-                         const remainingBank = bankItems.slice(spaceInInv);
-                         onUpdateCharacter({ ...character, bank: remainingBank, inventory: [...character.inventory, ...toWithdraw] });
+                         triggerAlert(language === 'ru' ? 'Withdraw all (take top items) coming soon!' : 'Withdraw all coming soon!', 'info');
                       }}
                       className="bg-[#121620] border border-[#2b3548] text-[#94a3b8] hover:text-[#a5b4fc] text-[10px] md:text-xs font-bold px-2 md:px-3 py-1.5 uppercase rounded shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
                    >
-                      {language === 'ru' ? 'Забрать всё' : 'Withdraw All'}
+                      {language === 'ru' ? 'Забрать топовые' : 'Withdraw Top'}
                    </button>
                    <button 
                       onClick={() => {
-                         if (character.gold >= 100) {
-                            onUpdateCharacter({ ...character, gold: character.gold - 100, bankSlots: maxBankSlots + 8 });
-                            triggerAlert(language === 'ru' ? 'Расширение куплено!' : 'Expansion bought!', 'success');
-                         } else {
-                            triggerAlert(language === 'ru' ? 'Недостаточно золота!' : 'Not enough gold!', 'error');
-                         }
+                         triggerAlert(language === 'ru' ? 'Сортировка глобального банка скоро будет!' : 'Global bank sorting coming soon!', 'info');
                       }}
                       className="bg-gradient-to-b from-[#3b82f6] to-[#1d4ed8] border border-[#60a5fa] hover:brightness-110 text-white text-xs font-bold px-3 py-1.5 uppercase rounded shadow-[0_0_10px_rgba(59,130,246,0.3)] transition-all"
                    >
-                      {language === 'ru' ? 'Расширить (-100g)' : 'Expand (-100g)'}
+                      {language === 'ru' ? 'Про банкира' : 'Banker Info'}
                    </button>
                 </div>
              </div>

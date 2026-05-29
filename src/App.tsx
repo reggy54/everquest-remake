@@ -164,6 +164,10 @@ const GuildMotdSection = ({ currentMotd, onUpdate }: { currentMotd: string, onUp
   );
 };
 
+import { auth, loginWithGoogle, logoutUser, db, handleFirestoreError, OperationType, loginWithUsername, registerWithUsername } from './lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, setDoc, collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
+
 const AuthErrorModal = ({ message, onTryAgain }: { message: string; onTryAgain: () => void }) => {
   if (!message) return null;
   return (
@@ -194,20 +198,12 @@ const AuthErrorModal = ({ message, onTryAgain }: { message: string; onTryAgain: 
   );
 };
 
-const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: string; isAdmin: boolean }) => void }) => {
+const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { uid: string, username: string; email: string; isAdmin: boolean }) => void }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorVal, setErrorVal] = useState('');
   const [loading, setLoading] = useState(false);
-  const usernameInputRef = useRef<HTMLInputElement>(null);
-
-  const handleTryAgain = () => {
-    setErrorVal('');
-    setTimeout(() => {
-      usernameInputRef.current?.focus();
-    }, 10);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,45 +211,54 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: st
       setErrorVal('Пожалуйста, заполните все поля.');
       return;
     }
+    if (password.length < 6) {
+      setErrorVal('Пароль к Вратам должен быть не менее 6 символов.');
+      return;
+    }
     setErrorVal('');
     setLoading(true);
 
     try {
-      const endpoint = isRegistering ? '/api/register' : '/api/login';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), password })
-      });
+      if (isRegistering) {
+        await registerWithUsername(username, password);
+      } else {
+        await loginWithUsername(username, password);
+      }
+      // user will be handled by onAuthStateChanged in App.tsx
+    } catch (err: any) {
+      // Friendly errors based on Firebase error codes
+      if (err.code === 'auth/email-already-in-use') {
+        setErrorVal('Это Имя Персонажа уже занято другим странником.');
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        setErrorVal('Неверное имя или пароль.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setErrorVal('Вход по логину отключен. Пожалуйста, включите Email/Password в настройках Firebase Authentication.');
+      } else {
+        setErrorVal(err.message || 'Ошибка подключения к серверу.');
+      }
+      setLoading(false);
+    }
+  };
 
-      const contentType = res.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Не удалось подключиться к серверу логина (неверный формат ответа).');
-      }
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Произошла ошибка при аутентификации.');
-      }
+  const handleGoogleLogin = async () => {
+    setErrorVal('');
+    setLoading(true);
 
-      if (data.success) {
-        localStorage.setItem('eq3_user_session', JSON.stringify(data.user));
-        onLoginSuccess(data.user);
-      }
+    try {
+      await loginWithGoogle();
+      // user will be handled by onAuthStateChanged in App.tsx
     } catch (err: any) {
       setErrorVal(err.message || 'Ошибка подключения к серверу.');
-    } finally {
       setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden" style={{ minHeight: '100vh', backgroundImage: 'radial-gradient(circle at center, rgb(15, 23, 42) 0%, rgb(2, 6, 23) 100%)' }}>
-      {/* Background Decorative Grid */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
 
       <div className="max-w-md w-full bg-slate-900 border border-amber-600/50 rounded-2xl p-6 md:p-8 shadow-2xl relative z-10 backdrop-blur-sm">
         
-        {/* Core Game Logo Header */}
         <div className="text-center space-y-2 mb-8">
           <div className="inline-flex items-center justify-center bg-amber-950/80 border border-amber-500/40 p-3.5 rounded-full mb-1">
             <Shield className="h-10 w-10 text-amber-500 animate-pulse" />
@@ -272,16 +277,15 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: st
         </div>
 
         {errorVal && (
-          <AuthErrorModal message={errorVal} onTryAgain={handleTryAgain} />
+          <AuthErrorModal message={errorVal} onTryAgain={() => setErrorVal('')} />
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mb-4">
           <div>
             <label className="block text-[11px] font-mono text-slate-400 uppercase tracking-wider font-bold mb-1.5">
               Имя Персонажа / Логин
             </label>
             <input
-              ref={usernameInputRef}
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -293,7 +297,7 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: st
 
           <div>
             <label className="block text-[11px] font-mono text-slate-400 uppercase tracking-wider font-bold mb-1.5">
-              Пароль к Вратам
+              Пароль к Вратам (мин. 6 симв.)
             </label>
             <input
               type="password"
@@ -320,7 +324,7 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: st
           </button>
         </form>
 
-        <div className="mt-6 border-t border-slate-800/80 pt-4 text-center">
+        <div className="text-center mb-6">
           <button
             type="button"
             onClick={() => {
@@ -333,14 +337,36 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: st
             {isRegistering ? 'Уже есть аккаунт? Войти' : 'Впервые у нас? Регистрация аккаунта'}
           </button>
         </div>
-
-        {/* Info hints */}
-        <div className="mt-8 bg-slate-950/40 border border-slate-800/60 p-3 rounded-lg text-[10px] leading-relaxed space-y-1 text-slate-500">
-          <p className="font-bold text-slate-400 font-mono uppercase tracking-wide">💡 Памятка странника:</p>
-          <p>• Тщательно сохраняйте ваш логин и пароль. Мир помнит каждого героя.</p>
-          <p>• Назовите персонажа своим логином для плавной синхронизации сессии.</p>
+        
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-slate-800" />
+          </div>
+          <div className="relative flex justify-center text-[10px] font-mono">
+            <span className="bg-slate-900 px-2 text-slate-500">ИЛИ</span>
+          </div>
         </div>
 
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-2.5 rounded-lg text-xs uppercase tracking-widest cursor-pointer transition-all flex items-center justify-center gap-2 shadow-lg"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-slate-200" />
+            ) : (
+              'Авторизация через Google'
+            )}
+          </button>
+        </div>
+
+        <div className="mt-8 bg-slate-950/40 border border-slate-800/60 p-3 rounded-lg text-[10px] leading-relaxed space-y-1 text-slate-500 mt-6">
+          <p className="font-bold text-slate-400 font-mono uppercase tracking-wide">💡 Памятка странника:</p>
+          <p>• Тщательно сохраняйте ваш логин и пароль. Мир помнит каждого героя.</p>
+          <p>• Также доступна быстрая авторизация через Google, чтобы не запоминать пароль!</p>
+        </div>
       </div>
     </div>
   );
@@ -351,19 +377,41 @@ import ClassicRPChat from './components/ClassicRPChat';
 import NPCDialogWindow from './components/NPCDialogWindow';
 
 export default function App() {
-  const [user, setUser] = useState<{ username: string; isAdmin: boolean } | null>(() => {
-    const saved = localStorage.getItem('eq3_user_session');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return null;
+  const [user, setUser] = useState<{ uid: string, username: string; email: string; isAdmin: boolean } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Ensure user is in firestore
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        try {
+          const snapshot = await getDoc(userRef);
+          if (!snapshot.exists()) {
+             await setDoc(userRef, {
+               email: firebaseUser.email,
+               createdAt: Date.now()
+             });
+          }
+          setUser({
+            uid: firebaseUser.uid,
+            username: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Unknown',
+            email: firebaseUser.email || '',
+            isAdmin: firebaseUser.email === 'reggy824@gmail.com' || false // Can be expanded
+          });
+        } catch (error) {
+           handleFirestoreError(error, OperationType.GET, 'users');
+        }
+      } else {
+        setUser(null);
       }
-    }
-    return null;
-  });
+      setAuthLoading(false);
+    });
+    return () => unsub();
+  }, []);
 
   const [characters, setCharacters] = useState<PlayerCharacter[]>([]);
+  const [charactersLoaded, setCharactersLoaded] = useState(false);
   const [isCreatingCharacter, setIsCreatingCharacter] = useState(false);
   const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
   const [character, setCharacter] = useState<PlayerCharacter | null>(null);
@@ -519,7 +567,25 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isSendingChat, setIsSendingChat] = useState(false);
   const [activeNpcDialog, setActiveNpcDialog] = useState<any>(null);
-  
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(query(collection(db, 'chat_messages')), (snapshot) => {
+       const msgs = snapshot.docs.map(d => {
+         const data = d.data();
+         return {
+            id: d.id,
+            ...data
+         } as ChatMessage;
+       }).sort((a,b) => a.createdAt - b.createdAt);
+       // Only keep last 100 messages in state
+       setChatMessages(msgs.slice(msgs.length > 100 ? msgs.length - 100 : 0));
+    }, (error) => {
+       console.error("Chat error:", error);
+    });
+    return () => unsub();
+  }, [user]);
+
   // Lore states
   const [loreSearch, setLoreSearch] = useState('');
   const [loreLoading, setLoreLoading] = useState(false);
@@ -732,50 +798,56 @@ export default function App() {
     return updated;
   };
 
-  // 1. Initial Load: Check for character in local storage
   useEffect(() => {
-    let _chars: PlayerCharacter[] = [];
-    const savedArray = localStorage.getItem('eq3_characters');
-    if (savedArray) {
-      try {
-        _chars = JSON.parse(savedArray).map(ensureCharacterFields);
-        setCharacters(_chars);
-      } catch (e) {
-        console.error('Failed to parse saved characters array', e);
-      }
+    let unsub = () => {};
+    if (user) {
+      setCharactersLoaded(false);
+      const q = query(collection(db, 'characters'), where('userId', '==', user.uid));
+      unsub = onSnapshot(q, (snapshot) => {
+         const chars = snapshot.docs.map(d => {
+             const data = d.data();
+             return ensureCharacterFields(data as any);
+         });
+         setCharacters(chars);
+         setCharactersLoaded(true);
+         
+         // Update the current character if it was modified
+         setCharacter(prev => {
+           if (!prev) return prev;
+           const updatedSelected = chars.find(c => c.name === prev.name);
+           return updatedSelected || prev;
+         });
+      }, (error) => {
+         handleFirestoreError(error, OperationType.LIST, 'characters');
+         setCharactersLoaded(true);
+      });
     } else {
-      const saved = localStorage.getItem('eq3_character');
-      if (saved) {
-        try {
-          const parsed = ensureCharacterFields(JSON.parse(saved));
-          _chars = [parsed];
-          setCharacters(_chars);
-          localStorage.setItem('eq3_characters', JSON.stringify(_chars));
-        } catch (e) {
-          console.error('Failed to parse saved single character', e);
-        }
-      }
+       setCharacters([]);
+       setCharacter(null);
+       setCharactersLoaded(false);
     }
-  }, []);
+    return () => unsub();
+  }, [user]);
 
   // Save character utility
-  const saveCharacter = (char: PlayerCharacter) => {
+  const saveCharacter = async (char: PlayerCharacter) => {
+    if (!user) return;
     const enriched = ensureCharacterFields(char);
     setCharacter(enriched);
     
-    setCharacters(prev => {
-      let updated = [...prev];
-      const idx = updated.findIndex(c => c.name === enriched.name);
-      if (idx >= 0) {
-        updated[idx] = enriched;
-      } else {
-        updated.push(enriched);
-      }
-      localStorage.setItem('eq3_characters', JSON.stringify(updated));
-      return updated;
-    });
-
-    localStorage.setItem('eq3_character', JSON.stringify(enriched));
+    // Convert to plain object for firestore
+    const toSave = {
+      ...enriched,
+      userId: user.uid,
+      createdAt: (enriched as any).createdAt || Date.now(),
+      updatedAt: Date.now()
+    };
+    
+    try {
+        await setDoc(doc(db, 'characters', enriched.name), toSave);
+    } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `characters/${enriched.name}`);
+    }
   };
 
   const grantAchievement = (id: string, name: string, description: string, icon: string = '🏆') => {
@@ -1582,27 +1654,35 @@ export default function App() {
     setCharacterToDelete(name);
   };
 
-  const confirmDeleteCharacter = (name: string, e: React.MouseEvent) => {
+  const confirmDeleteCharacter = async (name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setCharacters(prev => {
-      const remaining = prev.filter(c => c.name !== name);
-      localStorage.setItem('eq3_characters', JSON.stringify(remaining));
-      return remaining;
-    });
-    setCharacterToDelete(null);
-    triggerAlert(`${name} ${t('charDeleted')}.`, 'info');
+    try {
+       const { deleteDoc } = await import('firebase/firestore');
+       await deleteDoc(doc(db, 'characters', name));
+       setCharacterToDelete(null);
+       triggerAlert(`${name} ${t('charDeleted')}.`, 'info');
+    } catch (err) {
+       handleFirestoreError(err, OperationType.DELETE, `characters/${name}`);
+    }
   };
 
   const handleSendChatOOC = async (textMsg: string, channel: string) => {
-    if (!textMsg.trim() || !character) return;
+    if (!textMsg.trim() || !user || !character) return;
 
     setIsSendingChat(true);
     try {
+      const { addDoc, collection } = await import('firebase/firestore');
+      await addDoc(collection(db, 'chat_messages'), {
+         text: textMsg,
+         sender: character.name,
+         userId: user.uid,
+         channel: channel,
+         createdAt: Date.now()
+      });
+
       const response = await fetch('/api/chat/send', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender: character.name,
           channel: channel,
@@ -1617,8 +1697,16 @@ export default function App() {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const data = await response.json();
-          if (data.currentMessages) {
-            setChatMessages(data.currentMessages);
+          if (data.answers && Array.isArray(data.answers)) {
+             for (const ans of data.answers) {
+                 await addDoc(collection(db, 'chat_messages'), {
+                    text: ans.text,
+                    sender: ans.sender || 'Таинственный голос',
+                    userId: 'SYSTEM',
+                    channel: ans.channel || channel,
+                    createdAt: Date.now() + 100
+                 });
+             }
           }
         }
       }
@@ -1636,18 +1724,25 @@ export default function App() {
 
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim() || !character) return;
+    if (!chatInput.trim() || !user || !character) return;
 
     setIsSendingChat(true);
     const textMsg = chatInput;
     setChatInput('');
 
     try {
+      const { addDoc, collection } = await import('firebase/firestore');
+      await addDoc(collection(db, 'chat_messages'), {
+         text: textMsg,
+         sender: character.name,
+         userId: user.uid,
+         channel: chatChannel,
+         createdAt: Date.now()
+      });
+
       const response = await fetch('/api/chat/send', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender: character.name,
           channel: chatChannel,
@@ -1662,8 +1757,16 @@ export default function App() {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const data = await response.json();
-          if (data.currentMessages) {
-            setChatMessages(data.currentMessages);
+          if (data.answers && Array.isArray(data.answers)) {
+             for (const ans of data.answers) {
+                 await addDoc(collection(db, 'chat_messages'), {
+                    text: ans.text,
+                    sender: ans.sender || 'Таинственный голос',
+                    userId: 'SYSTEM',
+                    channel: ans.channel || chatChannel,
+                    createdAt: Date.now() + 100
+                 });
+             }
           }
         }
       }
@@ -2584,12 +2687,27 @@ export default function App() {
   };
 
   // 8. View Renderers
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-amber-500 font-mono text-sm uppercase tracking-widest space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin" />
+        <div>Authenticating...</div>
+      </div>
+    );
+  }
+
   if (user === null) {
     return (
-      <LoginScreen onLoginSuccess={(loggedInUser) => {
-        setUser(loggedInUser);
-        triggerAlert(`Добро пожаловать в игру, ${loggedInUser.username}!`, 'success');
-      }} />
+      <LoginScreen onLoginSuccess={() => {}} />
+    );
+  }
+
+  if (!charactersLoaded) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-amber-500 font-mono text-sm uppercase tracking-widest space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin" />
+        <div>Loading World Data...</div>
+      </div>
     );
   }
 
@@ -3007,7 +3125,7 @@ export default function App() {
                <Users className="h-3 w-3 md:h-3.5 md:w-3.5" />
             </button>
             <button 
-               onClick={() => { localStorage.removeItem('eq3_user_session'); setUser(null); }}
+               onClick={async () => { await logoutUser(); localStorage.removeItem('eq3_user_session'); setUser(null); }}
                className="h-6 w-6 md:h-7 md:w-7 flex items-center justify-center bg-rose-950/80 hover:bg-rose-900 backdrop-blur border border-rose-800/80 text-rose-300 hover:text-white rounded cursor-pointer transition-colors shadow"
                title="Logout"
             >

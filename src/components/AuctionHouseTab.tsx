@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { PlayerCharacter, Item } from '../types';
 import { Search, Gavel, Coins, Shield, Swords, Package, FlaskConical, Clock, Filter, X, Hammer } from 'lucide-react';
+import { db, handleFirestoreError, OperationType, auth } from '../lib/firebase';
+import { collection, query, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 
 interface AuctionHouseTabProps {
   character: PlayerCharacter;
@@ -56,63 +58,38 @@ export default function AuctionHouseTab({ character, language, onUpdateCharacter
   const [isCreatingAuction, setIsCreatingAuction] = useState(false);
   const [auctionItemBasePrice, setAuctionItemBasePrice] = useState(0);
 
-  // Generate some dummy listings
   const [listings, setListings] = useState<AuctionListing[]>([]);
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<Item | null>(null);
+  const [createBid, setCreateBid] = useState(0);
+  const [createBuyout, setCreateBuyout] = useState(10);
 
   useEffect(() => {
     // Pick initial goblin phrase
     const phrases = language === 'ru' ? GOBLIN_PHRASES_RU : GOBLIN_PHRASES_EN;
     setGoblinPhrase(phrases[Math.floor(Math.random() * phrases.length)]);
 
-    // Generate dummy lots
-    const dummyLots: AuctionListing[] = [
-      {
-         id: 'l1',
-         item: { id: 'l1_item', name: language === 'ru' ? 'Легендарный Клинок Разлома' : 'Legendary Rift Blade', rarity: 'legendary', slot: 'primary', stats: { str: 45, sta: 20 }, description: '...', price: 500 },
-         seller: 'Игрок123',
-         timeLeftMinutes: 705, // 11h 45m
-         currentBid: { g: 245, s: 30, c: 0 },
-         buyout: { g: 480, s: 0, c: 0 },
-         hasBid: true
-      },
-      {
-         id: 'l2',
-         item: { id: 'l2_item', name: language === 'ru' ? 'Слиток Истинного Железа' : 'True Iron Ingot', rarity: 'uncommon', slot: 'material', description: '...', price: 10, stats: {} },
-         seller: 'КузнецБоб',
-         timeLeftMinutes: 45,
-         currentBid: { g: 2, s: 50, c: 0 },
-         buyout: { g: 3, s: 0, c: 0 },
-         hasBid: false
-      },
-      {
-         id: 'l3',
-         item: { id: 'l3_item', name: language === 'ru' ? 'Панцирь Драконьей Черепахи' : 'Dragon Turtle Shell', rarity: 'rare', slot: 'chest', stats: { ac: 150, sta: 30 }, description: '...', price: 120 },
-         seller: 'TankMaster',
-         timeLeftMinutes: 1400,
-         currentBid: { g: 15, s: 0, c: 0 },
-         buyout: { g: 45, s: 0, c: 0 },
-         hasBid: false
-      },
-      {
-         id: 'l4',
-         item: { id: 'l4_item', name: language === 'ru' ? 'Зелье Невидимости' : 'Invisibility Potion', rarity: 'common', slot: 'consumable', description: '...', price: 5, stats: {} },
-         seller: 'Алхимик22',
-         timeLeftMinutes: 120,
-         currentBid: { g: 1, s: 20, c: 0 },
-         buyout: { g: 1, s: 50, c: 0 },
-         hasBid: true
-      },
-      {
-         id: 'l5',
-         item: { id: 'l5_item', name: language === 'ru' ? 'Корона Забытого Короля' : 'Crown of the Forgotten King', rarity: 'epic', slot: 'head', stats: { int: 50, mana: 200 }, description: '...', price: 350 },
-         seller: 'MagicDude',
-         timeLeftMinutes: 2800,
-         currentBid: { g: 900, s: 0, c: 0 },
-         buyout: { g: 1200, s: 0, c: 0 },
-         hasBid: true
-      }
-    ];
-    setListings(dummyLots);
+    // Subscribe to Firestore Auctions
+    const unsub = onSnapshot(query(collection(db, 'auctions')), (snapshot) => {
+       const auctionLots: AuctionListing[] = snapshot.docs.map(doc => {
+          const data = doc.data();
+          const msRemaining = (data.createdAt + 86400000) - Date.now(); // assume constant 24h for now
+          return {
+             id: doc.id,
+             item: data.item,
+             seller: data.sellerName,
+             sellerId: data.sellerId,
+             timeLeftMinutes: Math.max(0, Math.floor(msRemaining / 60000)),
+             currentBid: { g: data.price, s: 0, c: 0 },
+             buyout: { g: data.price, s: 0, c: 0 },
+             hasBid: false
+          };
+       });
+       // Just to have some data, if empty add fake ones? Nah let's just show real data
+       setListings(auctionLots);
+    }, (error) => {
+       console.error("Auctions error:", error);
+    });
+    return () => unsub();
   }, [language]);
 
   const RarityColor = (rarity: string) => {
@@ -139,7 +116,7 @@ export default function AuctionHouseTab({ character, language, onUpdateCharacter
   };
 
   const formatTimeLimit = (mins: number) => {
-    if (mins >= 1440) return language === 'ru' ? '48ч' : '48h'; // roughly
+    if (mins >= 1440) return language === 'ru' ? '48ч' : '48h';
     if (mins >= 720) return language === 'ru' ? '24ч' : '24h';
     if (mins >= 120) return language === 'ru' ? '12ч' : '12h';
     if (mins >= 60) return language === 'ru' ? 'Долго' : 'Long';
@@ -147,11 +124,62 @@ export default function AuctionHouseTab({ character, language, onUpdateCharacter
     return language === 'ru' ? 'Коротко' : 'Short';
   };
 
-  const handleBuyout = () => {
+  const handleBuyout = async () => {
     if (!selectedListing) return;
-    triggerAlert(language === 'ru' ? `Выкуплен предмет: ${selectedListing.item.name}` : `Bought item: ${selectedListing.item.name}`, 'success');
-    setListings(listings.filter(l => l.id !== selectedListing.id));
-    setSelectedListing(null);
+    if (character.gold < selectedListing.buyout.g) {
+       triggerAlert(language === 'ru' ? 'Недостаточно золота!' : 'Not enough gold!', 'error');
+       return;
+    }
+    // Only simulate buyout if we are buying from another player
+    if (character.inventory.length >= 50) {
+       triggerAlert(language === 'ru' ? 'Рюкзак полон!' : 'Inventory is full!', 'error');
+       return;
+    }
+
+    try {
+       await deleteDoc(doc(db, 'auctions', selectedListing.id));
+       // Give item to character and take gold
+       onUpdateCharacter({
+          ...character,
+          gold: character.gold - selectedListing.buyout.g,
+          inventory: [...character.inventory, selectedListing.item]
+       });
+       triggerAlert(language === 'ru' ? `Выкуплен предмет: ${selectedListing.item.name}` : `Bought item: ${selectedListing.item.name}`, 'success');
+       setSelectedListing(null);
+    } catch (e) {
+       triggerAlert('Error buying item.', 'error');
+    }
+  };
+
+  const handleCreateAuction = async () => {
+     if (!selectedInventoryItem) {
+        triggerAlert(language === 'ru' ? 'Выберите предмет!' : 'Select an item!', 'error');
+        return;
+     }
+
+     if (!auth.currentUser) return;
+
+     try {
+        await addDoc(collection(db, 'auctions'), {
+           sellerName: character.name,
+           sellerId: auth.currentUser.uid,
+           item: selectedInventoryItem,
+           price: createBuyout,
+           createdAt: Date.now()
+        });
+        
+        // Remove from inventory
+        onUpdateCharacter({
+           ...character,
+           inventory: character.inventory.filter(i => i.id !== selectedInventoryItem.id)
+        });
+
+        triggerAlert(language === 'ru' ? 'Лот выставлен!' : 'Auction created!', 'success');
+        setIsCreatingAuction(false);
+        setSelectedInventoryItem(null);
+     } catch(e) {
+        triggerAlert('Error creating auction.', 'error');
+     }
   };
 
   // Filter listings based on active tab & search
@@ -472,27 +500,60 @@ export default function AuctionHouseTab({ character, language, onUpdateCharacter
                
                <div className="flex gap-4 items-start mb-6">
                   {/* Item Slot */}
-                  <div className="w-16 h-16 border-[2px] border-[#3a2a1a] bg-black/60 shadow-[inset_0_0_10px_rgba(0,0,0,0.8)] flex items-center justify-center rounded cursor-pointer hover:border-[#ffd100] transition-colors relative">
-                     <span className="text-[10px] text-[#4a3a2a] font-bold text-center">ПЕРЕТАЩИТЕ<br/>ПРЕДМЕТ</span>
-                  </div>
+                  {selectedInventoryItem ? (
+                     <div 
+                         className="w-16 h-16 border-[2px] rounded bg-black/60 shadow-[inset_0_0_10px_rgba(0,0,0,0.8)] flex items-center justify-center cursor-pointer relative"
+                         style={{ borderColor: RarityHex(selectedInventoryItem.rarity) }}
+                         onClick={() => setSelectedInventoryItem(null)}
+                     >
+                         <div className="opacity-80 scale-[1.5] relative">
+                            <ItemIconWrapper item={selectedInventoryItem} size={24} />
+                         </div>
+                     </div>
+                  ) : (
+                     <div className="w-16 h-16 border-[2px] border-[#3a2a1a] bg-black/60 shadow-[inset_0_0_10px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center rounded relative">
+                        <span className="text-[10px] text-[#4a3a2a] font-bold text-center">ВЫБЕРИТЕ<br/>НИЖЕ</span>
+                     </div>
+                  )}
+
                   <div className="flex-1 flex flex-col justify-center">
                      <div className="text-[11px] text-[#887a68] mb-1 font-bold uppercase">Объект аукциона</div>
-                     <div className="text-[#3a2a1a] font-serif italic text-sm">Предмет не выбран...</div>
+                     <div className="text-[#3a2a1a] font-serif italic text-sm">
+                        {selectedInventoryItem ? selectedInventoryItem.name : 'Предмет не выбран...'}
+                     </div>
                   </div>
+               </div>
+
+               {/* Inventory selector list */}
+               <div className="bg-[#120d09] border border-[#3a2a1a] p-2 mb-4 h-[120px] overflow-y-auto custom-scrollbar flex flex-wrap gap-1">
+                  {character.inventory.length === 0 && (
+                     <span className="text-[#554a3a] text-xs font-serif p-2">Рюкзак пуст.</span>
+                  )}
+                  {character.inventory.map((invItem) => (
+                      <div
+                         key={invItem.id}
+                         onClick={() => setSelectedInventoryItem(invItem)}
+                         className={`w-10 h-10 border relative cursor-pointer hover:brightness-125 flex items-center justify-center ${selectedInventoryItem?.id === invItem.id ? 'border-[#ffd100] shadow-[0_0_8px_rgba(255,209,0,0.5)]' : 'border-[#3a2a1a] bg-[#1a1410]'}`}
+                      >
+                         <div className="opacity-80">
+                           <ItemIconWrapper item={invItem} size={24} />
+                         </div>
+                      </div>
+                  ))}
                </div>
                
                <div className="space-y-4 font-mono text-[11px] mb-6">
-                  <div className="flex justify-between items-center bg-black/30 p-2 border border-[#2a1a0f] rounded">
-                     <span className="text-[#a08a70] uppercase font-bold">Начальная цена:</span>
+                  <div className="flex justify-between items-center bg-black/30 p-2 border border-[#2a1a0f] rounded opacity-50">
+                     <span className="text-[#a08a70] uppercase font-bold">Начальная цена (недоступно):</span>
                      <div className="flex items-center gap-1">
-                        <input type="number" min="0" placeholder="0" className="w-12 bg-transparent text-white text-right outline-none" />
+                        <input type="number" disabled value={createBid} className="w-12 bg-transparent text-white text-right outline-none" />
                         <span className="text-yellow-400">g</span>
                      </div>
                   </div>
                   <div className="flex justify-between items-center bg-black/30 p-2 border border-[#2a1a0f] rounded">
-                     <span className="text-[#a08a70] uppercase font-bold">Цена выкупа:</span>
+                     <span className="text-[#a08a70] uppercase font-bold">Цена выкупа (Gold):</span>
                      <div className="flex items-center gap-1">
-                        <input type="number" min="0" placeholder="10" className="w-12 bg-transparent text-white text-right outline-none" />
+                        <input type="number" min="1" value={createBuyout} onChange={e => setCreateBuyout(Number(e.target.value))} className="w-16 bg-transparent text-white text-right outline-none" />
                         <span className="text-yellow-400">g</span>
                      </div>
                   </div>
@@ -512,10 +573,8 @@ export default function AuctionHouseTab({ character, language, onUpdateCharacter
                      <span className="text-[#e6cc80] text-[10px]">1g 20s 0c</span>
                   </div>
                   <button 
-                     onClick={() => {
-                        triggerAlert(language === 'ru' ? 'Нечего выставлять!' : 'Nothing to list!', 'error');
-                     }}
-                     className="bg-gradient-to-b from-[#ffd100] to-[#c79100] text-black font-black uppercase text-[11px] px-6 py-2 rounded shadow-[0_0_15px_rgba(255,209,0,0.4)]"
+                     onClick={handleCreateAuction}
+                     className="bg-gradient-to-b from-[#ffd100] to-[#c79100] text-black font-black uppercase text-[11px] px-6 py-2 rounded shadow-[0_0_15px_rgba(255,209,0,0.4)] hover:brightness-110"
                   >
                      Выставить
                   </button>
