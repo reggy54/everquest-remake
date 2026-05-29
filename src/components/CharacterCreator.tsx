@@ -8,7 +8,7 @@ import {
   STARTING_GEAR,
 } from '../data/gameData';
 import { Shield, Sparkles, Wand2, RefreshCw } from 'lucide-react';
-import Character3DModel from './Character3DModel';
+import Character2DModel from './Character2DModel';
 
 interface CharacterCreatorProps {
   onCreated: (character: PlayerCharacter) => void;
@@ -234,6 +234,12 @@ export default function CharacterCreator({ onCreated, language = 'ru' }: Charact
       ],
       quests: starterQuests,
       unlockedSpells: [],
+      legacy: {
+        createdAt: Date.now(),
+        titles: ['Новичок Этерии'],
+        achievements: [],
+        legacyPoints: 0,
+      },
     };
 
     onCreated(character);
@@ -241,9 +247,9 @@ export default function CharacterCreator({ onCreated, language = 'ru' }: Charact
 
   return (
     <div className="w-full relative z-0 flex items-center justify-start min-h-screen">
-      {/* Background Cinematic 3D Scene */}
+      {/* Background Cinematic Scene */}
       <div className="fixed inset-0 -z-10 bg-slate-950">
-         <Character3DModel charClass={selectedClass} race={selectedRace} equipment={{}} />
+         <Character2DModel charClass={selectedClass} race={selectedRace} equipment={{}} />
       </div>
 
       <div className="fixed inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/60 to-transparent pointer-events-none -z-10"></div>

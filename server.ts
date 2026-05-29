@@ -262,21 +262,23 @@ app.post('/api/chat/send', async (req, res) => {
 
   // If the user talks in general OOC or Shout channels, let another simulated player answer or comment!
   // We activate GEMINI to yield 1-2 responses from other simulated MMO players!
-  if (ai && (channel === 'OOC' || channel === 'Shout' || channel === 'Guild')) {
+  if (ai && (channel === 'OOC' || channel === 'Shout' || channel === 'Guild' || channel === 'Say' || channel === 'RP' || channel === 'World')) {
     try {
       const activeRecentText = globalMessages
         .slice(-6)
         .map((m) => `[${m.channel}] ${m.sender}: ${m.text}`)
         .join('\n');
 
-      const prompt = `You are a group of iconic retro EverQuest or classic MMORPG players hanging out in global chat.
+      const prompt = `You are a group of iconic retro EverQuest or classic MMORPG players hanging out in global chat, or if they are in 'RP' or 'Say' channel, you are immersed in roleplay in the tavern/dungeon.
 A player named "${sender}" (Level ${level} ${race} ${charClass}) says: "${text}".
 Analyze the chat log below of the last few chat messages inside the server:
 ${activeRecentText}
 
-Provide an immediate follow-up response in JSON format from another player (or up to two players) replying to "${sender}"'s comment, or commenting on relevant EverQuest info (quests, item lookups, raid complaints, bad luck rolling, gold sellers, or classic dungeon crawls like Blackburrow/Mistmoore/Guk).
-Keep the character names retro (classic MMO style, e.g., "Shadow_Blade", "ElfLord99", " cleric_girl", "OgreSmasher").
-Keep transcripts realistic and human-like: short comments, colloquial MMO terms (e.g. LFG, OOM, agro, DPS, ding, bio, wtfe, wts, wtb). Include correct channel types (mostly OOC).
+Provide an immediate follow-up response in JSON format from another player (or up to two players) replying to "${sender}"'s comment. 
+If the channel is 'RP', reply as a serious roleplayer using fantasy terms, acting as an adventurer (e.g. "I greet thee, friend!").
+If the channel is 'Say', keep it local.
+If the channel is 'World' or 'OOC', keep it meta (e.g. LFG, OOM, agro, DPS, ding, bio, wtfe, wts, wtb).
+Keep the character names classic MMO style.
 
 Format return JSON:
 {
@@ -290,7 +292,7 @@ Format return JSON:
 }`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -327,7 +329,7 @@ Format return JSON:
         }
       }
     } catch (err: any) {
-      console.warn('Failure inside Gemini automatic chat retort:', err?.message || 'Rate limit');
+      console.warn('Failure inside Gemini automatic chat retort: API Error or Rate Limit');
     }
   } else if (!ai && (channel === 'OOC' || channel === 'Shout' || channel === 'Guild')) {
     // Basic mock replies if Gemini API is not working or not configured
@@ -373,7 +375,7 @@ Format return JSON:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -402,7 +404,7 @@ Format return JSON:
 
     res.json(parsed);
   } catch (err: any) {
-    console.warn('Error generating world event:', err?.message || 'Rate limit');
+    console.warn('Error generating world event: ', err);
     const fallback = {
       title: 'Внезапное затишье',
       description: 'Магические потоки мира стабилизировались. Временно ничего не происходит.',
@@ -439,7 +441,7 @@ app.post('/api/gemini/player-impact', async (req, res) => {
 Пиши на русском языке, максимум 150 символов.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt
     });
 
@@ -454,7 +456,7 @@ app.post('/api/gemini/player-impact', async (req, res) => {
 
     res.json({ success: true, text: reactionText });
   } catch (err: any) {
-    console.warn('Error in player-impact:', err?.message || 'Rate limit');
+    console.warn('Error in player-impact: API Error or Rate Limit');
     res.json({ message: 'Местные жители слишком заняты своими проблемами.' });
   }
 });
@@ -534,7 +536,7 @@ Schema of rewardItem:
 Provide JSON output only.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -581,7 +583,7 @@ Provide JSON output only.`;
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
   } catch (err: any) {
-    console.warn('Error generating quest:', err?.message || 'Rate limit');
+    console.warn('Error generating quest: API Error or Rate Limit');
     res.json({
         title: "Сбой связи с Режиссером",
         description: "Древние силы прервали сигнал. Ваша задача - просто выжить в эту эпоху.",
@@ -630,7 +632,7 @@ Output JSON containing an array "quests", where each has:
 Keep it immersive, translating game mechanics into story consequences. Language: Russian.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -661,7 +663,7 @@ Keep it immersive, translating game mechanics into story consequences. Language:
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
   } catch (err: any) {
-    console.warn('Error generating dynamic quests:', err?.message || 'Rate limit');
+    console.warn('Error generating dynamic quests: API Error or Rate Limit');
     res.json({
       quests: [
         {
@@ -704,7 +706,7 @@ Format standard output JSON:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -722,7 +724,7 @@ Format standard output JSON:
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
   } catch (err: any) {
-    console.warn('Error gathering lore:', err?.message || 'Rate limit');
+    console.warn('Error gathering lore: API Error or Rate Limit');
     res.json({
       title: 'Ошибка Архива',
       text: 'В данный момент не удалось получить доступ к древним хроникам Норрата. Магические помехи.'
@@ -754,7 +756,7 @@ Keep it under 100 words. Return JSON:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -771,7 +773,7 @@ Keep it under 100 words. Return JSON:
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
   } catch (err: any) {
-    console.warn('Error making DM combat summary:', err?.message || 'Rate limit');
+    console.warn('Error making DM combat summary: API Error or Rate Limit');
     res.json({
       description: `Стремительный обмен ударами в гуще боя! Пыль столбом. Вы продолжаете сражаться с врагом!`,
     });

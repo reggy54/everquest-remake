@@ -99,6 +99,30 @@ export default function CompanionsCamp({ character, onUpdateCharacter, triggerAl
     triggerAlert(`Вы подарили подарок ${comp.name}. Верность +${increment}!`, 'success');
   };
 
+  const forgeBloodTie = (comp: CompanionDef) => {
+    if (!character.legacy) return;
+    if (character.legacy.bloodTies?.includes(comp.name)) {
+      triggerAlert(`Вы уже связаны Кровными Узами со спутником ${comp.name}.`, 'warning');
+      return;
+    }
+    
+    const updated = { ...character };
+    updated.legacy!.bloodTies = [...(updated.legacy!.bloodTies || []), comp.name];
+    
+    // Add memory
+    const newMemory = {
+      id: `tie-${comp.id}-${Date.now()}`,
+      title: `Кровные Узы: ${comp.name}`,
+      text: `Вы заключили нерушимый союз со спутником ${comp.name}. Ни время, ни смерть не разлучат вас.`,
+      date: Date.now(),
+      type: 'social' as const
+    };
+    updated.legacy!.memories = [newMemory, ...(updated.legacy!.memories || [])];
+    
+    onUpdateCharacter(updated);
+    triggerAlert(`Вы заключили Кровные Узы с ${comp.name}! Ваша судьба отныне едина.`, 'success');
+  };
+
   const renderLoyaltyBar = (loyalty: number) => {
     let color = 'bg-slate-500';
     if (loyalty > 25) color = 'bg-blue-500';
@@ -210,6 +234,25 @@ export default function CompanionsCamp({ character, onUpdateCharacter, triggerAl
                             {renderLoyaltyBar(charCompanions[activeCompanionInfo.id].loyalty)}
                           </div>
                         </div>
+                        
+                        {charCompanions[activeCompanionInfo.id].loyalty >= 100 && !character.legacy?.bloodTies?.includes(activeCompanionInfo.name) && (
+                          <div className="mt-4">
+                            <button
+                              onClick={() => forgeBloodTie(activeCompanionInfo)}
+                              className="w-full bg-rose-950/40 hover:bg-rose-900 border border-rose-700/50 text-rose-300 transition-colors py-2 rounded-lg flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider"
+                            >
+                              <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
+                              Заключить Кровные Узы
+                            </button>
+                            <p className="text-[9px] text-slate-500 font-mono mt-1 text-center">Создает неразрывную связь. Сохраняется в разделе Наследие.</p>
+                          </div>
+                        )}
+                        {character.legacy?.bloodTies?.includes(activeCompanionInfo.name) && (
+                           <div className="mt-4 bg-slate-950 border border-slate-800 p-3 rounded-lg flex items-center justify-center gap-2">
+                             <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
+                             <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Связан Кровными Узами</span>
+                           </div>
+                        )}
                      </div>
                   )}
                 </div>

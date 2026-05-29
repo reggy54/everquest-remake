@@ -1,6 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=VT323&display=swap');
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "VT323", ui-monospace, SFMono-Regular, monospace;
+
   --animate-fade-in: fade-in 0.3s ease-out;
   --animate-slide-in: slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-slide-down: slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -27,6 +31,74 @@
   }
 }
 
+@layer utilities {
+  .bg-leather {
+    background-color: #2c1e16;
+    background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23000000' fill-opacity='0.2' fill-rule='evenodd'/%3E%3C/svg%3E");
+  }
+  .bg-metal {
+    background: linear-gradient(to bottom, #4a5568, #2d3748);
+    box-shadow: inset 1px 1px 0px rgba(255,255,255,0.3), inset -1px -1px 0px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.5);
+    border: 2px solid #1a202c;
+  }
+  .bg-wood {
+    background-color: #3e2723;
+    background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23000000' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E");
+  }
+  .bg-parchment {
+    background-color: #f4e4bc;
+    background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%238d6e63' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+  }
+  .btn-classic {
+    background: linear-gradient(to bottom, #d4af37, #aa7819);
+    border: 1px solid #3e2723;
+    color: #fff;
+    text-shadow: 1px 1px 0px #000;
+    box-shadow: inset 0 0 5px rgba(255,255,255,0.3), 0 2px 2px rgba(0,0,0,0.5);
+  }
+  .btn-classic:active {
+    background: linear-gradient(to top, #d4af37, #aa7819);
+    transform: translateY(1px);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+  }
+}
+
+body {
+  /* Default Sword/Arrow Cursor */
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l14 14M19 5l-14 14" pointer-events="none"/><path d="M2.5 12.5l7-7 12 12-7 7-12-12z" stroke="%23f59e0b" fill="%23b45309"/></svg>') 12 12, auto;
+}
+
+/* Custom interactive cursor for clickable elements */
+a, button, [role="button"], input, select, .cursor-pointer {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12.5l7-7 12 12-7 7-12-12z" stroke="%2334d399" fill="%23059669"/></svg>') 12 12, pointer !important;
+}
+
+/* scanline effect that overlays the entire app */
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.1) 50%,
+    rgba(0,0,0,0.1)
+  );
+  background-size: 100% 4px;
+  animation: scroll-scanlines 10s linear infinite;
+  opacity: 0.3;
+}
+
+@keyframes scroll-scanlines {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 400px; }
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -41,4 +113,34 @@
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 1); 
+}
+
+.arena-container-grid {
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.arena-container-grid::-webkit-scrollbar {
+  width: 6px;
+}
+.arena-container-grid::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 4px;
+}
+.arena-container-grid::-webkit-scrollbar-thumb {
+  background: rgba(239, 68, 68, 0.4);
+  border-radius: 4px;
+}
+.arena-container-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(239, 68, 68, 0.8);
+}
+
+.arena-interactive-zone {
+  transition: all 0.2s ease-in-out;
+}
+.arena-interactive-zone:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+  border-color: rgba(239, 68, 68, 0.7);
 }

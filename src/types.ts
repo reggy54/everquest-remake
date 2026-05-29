@@ -112,6 +112,7 @@ export interface PlayerCharacter {
   name: string;
   race: CharacterRace;
   class: CharacterClass;
+  specialization?: string;
   deity: string;
   level: number;
   exp: number;
@@ -122,8 +123,12 @@ export interface PlayerCharacter {
   maxMana: number;
   gold: number;
   stats: CombatStats;
+  freeStatPoints?: number;
+  statAllocationHistory?: { level: number; auto: Partial<CombatStats> }[];
   equipment: Record<SlotType, Item | null>;
   inventory: Item[];
+  bank?: Item[];
+  bankSlots?: number;
   quests: Quest[];
   msqProgress?: { chapter: number; stage: number; completed: boolean };
   unlockedSpells: Spell[];
@@ -140,6 +145,33 @@ export interface PlayerCharacter {
   arenaStats?: ArenaStats;
   companions?: Record<string, CompanionState>; // companionId -> state
   activeCompanion?: string | null; // companionId
+  legacy?: LegacyData;
+}
+
+export interface LegacyData {
+  createdAt: number;
+  titles: string[];
+  achievements: Achievement[];
+  legacyPoints: number;
+  bloodTies?: string[];
+  memories?: Memory[];
+  veteranMode?: boolean;
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  dateUnlocked: number;
+  icon?: string;
+}
+
+export interface Memory {
+  id: string;
+  title: string;
+  text: string;
+  date: number;
+  type: 'combat' | 'social' | 'world';
 }
 
 export interface VisualCustomization {
@@ -242,13 +274,23 @@ export interface SimulatedPlayer {
   relationshipStatus?: 'stranger' | 'friendly' | 'party_member';
 }
 
+export interface Guild {
+  id: string;
+  name: string;
+  tag: string;
+  leader: string;
+  level: number;
+  members: string[];
+}
+
 export interface ChatMessage {
   id: string;
   sender: string;
-  channel: 'OOC' | 'Auction' | 'Guild' | 'Shout' | 'System';
+  channel: 'Say' | 'RP' | 'Party' | 'Guild' | 'World' | 'System' | 'OOC' | 'Auction' | 'Shout';
   text: string;
   timestamp: string;
   class?: CharacterClass; // Optional details
+  rpTone?: string;
 }
 
 export interface Zone {

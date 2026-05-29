@@ -475,11 +475,11 @@ export default function PvPArena({ character, onUpdateCharacter, triggerAlert }:
                       <Search className="w-3 h-3" />
                       Доступные Противники ({arenaMode})
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 arena-container-grid">
                       {ARENA_ENEMIES.map(enemy => (
                         <div 
                           key={enemy.name} 
-                          className="bg-slate-900/50 border-l-[4px] border-l-red-600/70 hover:border-l-red-500 border border-slate-800/60 rounded-lg p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-800/80 transition-all shadow-md group"
+                          className="bg-slate-900/50 border-l-[4px] border-l-red-600/70 hover:border-l-red-500 border border-slate-800/60 rounded-lg p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-800/80 transition-all shadow-md group arena-interactive-zone"
                         >
                           <div>
                             <div className="flex items-center gap-2 mb-1">
@@ -580,17 +580,17 @@ export default function PvPArena({ character, onUpdateCharacter, triggerAlert }:
                   <div className="pt-2 relative z-10 border-t border-slate-800/50">
                     <h4 className="text-[10px] uppercase font-bold text-slate-500 tracking-widest pl-1 mb-3">Действия (Ваш Ход)</h4>
                     {!battleOver ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 arena-container-grid">
                          <div className="space-y-2">
                             <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider block">Нападение</span>
-                            <button onClick={() => handleArenaTurn('attack')} className="w-full bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 p-2.5 rounded flex items-center justify-between cursor-pointer transition-transform active:scale-95 shadow-md group">
+                            <button onClick={() => handleArenaTurn('attack')} className="w-full bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 p-2.5 rounded flex items-center justify-between cursor-pointer transition-transform active:scale-95 shadow-md group arena-interactive-zone">
                               <div className="flex items-center gap-2">
                                 <Swords className="h-4 w-4 text-slate-400 group-hover:text-slate-200 transition-colors" />
                                 <span className="text-[11px] font-bold font-mono tracking-widest uppercase">Физическая Атака</span>
                               </div>
                               <span className="text-[9px] text-slate-500 font-mono hidden sm:block">Базовый урон</span>
                             </button>
-                            <button onClick={() => handleArenaTurn('spell')} className="w-full bg-blue-950/40 hover:bg-blue-900/60 text-blue-100 border border-blue-900 p-2.5 rounded flex items-center justify-between cursor-pointer transition-transform active:scale-95 shadow-md group">
+                            <button onClick={() => handleArenaTurn('spell')} className="w-full bg-blue-950/40 hover:bg-blue-900/60 text-blue-100 border border-blue-900 p-2.5 rounded flex items-center justify-between cursor-pointer transition-transform active:scale-95 shadow-md group arena-interactive-zone">
                               <div className="flex items-center gap-2">
                                 <Zap className="h-4 w-4 text-blue-400 group-hover:text-blue-300 transition-colors" />
                                 <span className="text-[11px] font-bold font-mono tracking-widest uppercase">Выброс Разлома</span>
@@ -600,14 +600,14 @@ export default function PvPArena({ character, onUpdateCharacter, triggerAlert }:
                          </div>
                          <div className="space-y-2">
                             <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider block">Оборона</span>
-                            <button onClick={() => handleArenaTurn('heal')} className="w-full bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-100 border border-emerald-900 p-2.5 rounded flex items-center justify-between cursor-pointer transition-transform active:scale-95 shadow-md group">
+                            <button onClick={() => handleArenaTurn('heal')} className="w-full bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-100 border border-emerald-900 p-2.5 rounded flex items-center justify-between cursor-pointer transition-transform active:scale-95 shadow-md group arena-interactive-zone">
                               <div className="flex items-center gap-2">
                                 <Shield className="h-4 w-4 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
                                 <span className="text-[11px] font-bold font-mono tracking-widest uppercase">Защита</span>
                               </div>
                               <span className="text-[9px] text-emerald-500/70 font-mono hidden sm:block">i-frames & Хил</span>
                             </button>
-                            <button onClick={() => handleArenaTurn('parry')} className="w-full bg-amber-950/40 hover:bg-amber-900/60 text-amber-100 border border-amber-900 p-2.5 rounded flex items-center justify-between cursor-pointer transition-transform active:scale-95 shadow-md group">
+                            <button onClick={() => handleArenaTurn('parry')} className="w-full bg-amber-950/40 hover:bg-amber-900/60 text-amber-100 border border-amber-900 p-2.5 rounded flex items-center justify-between cursor-pointer transition-transform active:scale-95 shadow-md group arena-interactive-zone">
                               <div className="flex items-center gap-2">
                                 <ShieldAlert className="h-4 w-4 text-amber-400 group-hover:text-amber-300 transition-colors animate-pulse" />
                                 <span className="text-[11px] font-bold font-mono tracking-widest uppercase text-amber-300">Стойка (Парирование)</span>

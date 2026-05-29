@@ -7,9 +7,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PlayerCharacter, Zone, Item, Spell, ChatMessage, SlotType } from './types';
 import CharacterCreator from './components/CharacterCreator';
 import OnboardingCinematic from './components/OnboardingCinematic';
-import Combat2DArena from './components/Combat2DArena';
 import MapExplorer2D, { MapEntity } from './components/MapExplorer2D';
 import CosmeticSalonTransmog from './components/CosmeticSalonTransmog';
+import LegacyAndIdentity from './components/LegacyAndIdentity';
+import GuildLandsAndLegends from './components/GuildLandsAndLegends';
 import CompanionsCamp, { COMPANIONS_DB } from './components/CompanionsCamp';
 import PvPArena from './components/PvPArena';
 import GatheringCraftingEngine from './components/GatheringCraftingEngine';
@@ -21,10 +22,22 @@ import PetsAndHousing from './components/PetsAndHousing';
 import DungeonFinderInstance from './components/DungeonFinderInstance';
 import ProgressionTalentsFates from './components/ProgressionTalentsFates';
 import CompanionRPDialog from './components/CompanionRPDialog';
-import Character3DModel from './components/Character3DModel';
+import Character2DModel from './components/Character2DModel';
 import WorldMap from './components/WorldMap';
 import WorldEventsCalendar from './components/WorldEventsCalendar';
 import DynamicQuests from './components/DynamicQuests';
+import LevelUpModal from './components/LevelUpModal';
+import CharacterSheetTab from './components/CharacterSheetTab';
+import MerchantTab from './components/MerchantTab';
+import AuctionHouseTab from './components/AuctionHouseTab';
+import BankTab from './components/BankTab';
+import MailTab from './components/MailTab';
+import ForgeEthereaTab from './components/ForgeEthereaTab';
+import SpecializationModal from './components/SpecializationModal';
+import StatManager from './components/StatManager';
+import Zone2DWorld from './components/Zone2DWorld';
+import { getCharacterAvatarUrl } from './components/AvatarIcon';
+import { FREE_STATS_PER_LEVEL } from './data/classGrowths';
 import AdminPanel from './components/AdminPanel';
 import {
   GAME_ZONES,
@@ -73,9 +86,10 @@ import {
   ArrowUpCircle,
   Trash2,
   Hexagon,
-  HeartHandshake
+  HeartHandshake,
+  Box,
+  Mail
 } from 'lucide-react';
-
 const GuildCreationForm = ({ onCreate, playerGold }: { onCreate: (name: string, tag: string) => void, playerGold: number }) => {
   const [name, setName] = useState('');
   const [tag, setTag] = useState('');
@@ -332,6 +346,10 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { username: st
   );
 };
 
+import ClassicCombatHUD from './components/ClassicCombatHUD';
+import ClassicRPChat from './components/ClassicRPChat';
+import NPCDialogWindow from './components/NPCDialogWindow';
+
 export default function App() {
   const [user, setUser] = useState<{ username: string; isAdmin: boolean } | null>(() => {
     const saved = localStorage.getItem('eq3_user_session');
@@ -350,7 +368,8 @@ export default function App() {
   const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
   const [character, setCharacter] = useState<PlayerCharacter | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<'zones' | 'merchant' | 'lore' | 'quests' | 'character' | 'chat' | 'guild-party' | 'admin' | 'dungeons' | 'pets-housing' | 'crafting-market' | 'worldmap' | 'events' | 'progression' | 'companions' | 'arena'>('worldmap');
+  const [pendingLevelUp, setPendingLevelUp] = useState<number | null>(null);
+  const [selectedTab, setSelectedTab] = useState<'zones' | 'merchant' | 'auction' | 'bank' | 'mail' | 'lore' | 'quests' | 'character' | 'chat' | 'guild-party' | 'admin' | 'dungeons' | 'pets-housing' | 'crafting-market' | 'worldmap' | 'events' | 'progression' | 'companions' | 'arena' | '3d-world' | 'legacy'>('worldmap');
   const [activeZone, setActiveZone] = useState<Zone>(GAME_ZONES[0]);
   const [showServerPanel, setShowServerPanel] = useState(false);
 
@@ -365,6 +384,9 @@ export default function App() {
       'worldmap': 'Карта мира',
       'zones': 'Локации',
       'merchant': 'Туннель',
+      'auction': 'Аукцион',
+      'bank': 'Банк',
+      'mail': 'Почта',
       'character': 'Снаряжение',
       'guild-party': 'Гильдия/Группа',
       'chat': 'Чат',
@@ -380,13 +402,18 @@ export default function App() {
       'createChar': 'Создать Героя',
       'charDeleted': 'удален навсегда',
       'charDeleteWarn': 'Вы уверены, что хотите удалить персонажа',
-      'arena': 'Арена'
+      'arena': 'Арена',
+      '3d-world': '3D Мир',
+      'legacy': 'Наследие'
     },
     'en': {
       'logout': 'Log Out',
       'worldmap': 'World Map',
       'zones': 'Zones',
       'merchant': 'Shop',
+      'auction': 'Auction',
+      'bank': 'Bank',
+      'mail': 'Mail',
       'character': 'Character',
       'guild-party': 'Guild/Group',
       'chat': 'Chat',
@@ -402,7 +429,9 @@ export default function App() {
       'createChar': 'Create Character',
       'charDeleted': 'permanently deleted',
       'charDeleteWarn': 'Are you sure you want to delete character',
-      'arena': 'Arena'
+      'arena': 'Arena',
+      '3d-world': '3D World',
+      'legacy': 'Legacy'
     }
   };
   const t = (key: keyof typeof dic['ru']) => dic[language][key] || key;
@@ -489,7 +518,7 @@ export default function App() {
   const [chatChannel, setChatChannel] = useState<'OOC' | 'Auction' | 'Guild' | 'Shout'>('OOC');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isSendingChat, setIsSendingChat] = useState(false);
-  const [isChatVisible, setIsChatVisible] = useState(true);
+  const [activeNpcDialog, setActiveNpcDialog] = useState<any>(null);
   
   // Lore states
   const [loreSearch, setLoreSearch] = useState('');
@@ -528,7 +557,7 @@ export default function App() {
   const [combatVisualEvent, setCombatVisualEvent] = useState<{ id: number; type: 'melee' | 'taunt' | 'fire' | 'heal' | 'ice' | 'buff' | 'monster'; label: string; amount?: number } | null>(null);
 
   // Expanded Guild Features: PvE, PvP and Economy State Managers
-  const [guildSubTab, setGuildSubTab] = useState<'management' | 'pve' | 'pvp' | 'craft'>('management');
+  const [guildSubTab, setGuildSubTab] = useState<'management' | 'pve' | 'pvp' | 'craft' | 'lands'>('management');
   const [craftSubTab, setCraftSubTab] = useState<'craft' | 'enhance' | 'reforge' | 'sockets' | 'salvage'>('craft');
 
   const [guildUpgrades, setGuildUpgrades] = useState<Record<string, number>>(() => {
@@ -685,6 +714,21 @@ export default function App() {
         points: 10
       };
     }
+    if (!updated.legacy) {
+      updated.legacy = {
+        createdAt: Date.now() - 365 * 24 * 60 * 60 * 1000, // By default older characters become 1 yr old for testing
+        titles: ['Новичок Этерии', 'Гость из Прошлого'],
+        achievements: [],
+        legacyPoints: 150,
+        bloodTies: [],
+        memories: [],
+        veteranMode: false
+      };
+    } else {
+      if (!updated.legacy.bloodTies) updated.legacy.bloodTies = [];
+      if (!updated.legacy.memories) updated.legacy.memories = [];
+      if (typeof updated.legacy.veteranMode === 'undefined') updated.legacy.veteranMode = false;
+    }
     return updated;
   };
 
@@ -734,6 +778,31 @@ export default function App() {
     localStorage.setItem('eq3_character', JSON.stringify(enriched));
   };
 
+  const grantAchievement = (id: string, name: string, description: string, icon: string = '🏆') => {
+    if (!character || !character.legacy) return;
+    
+    // Check if already has it to avoid duplicates
+    if (character.legacy.achievements.find(a => a.id === id)) return;
+
+    const newAch = { id, name, description, dateUnlocked: Date.now(), icon };
+    const updated = { ...character };
+    updated.legacy!.achievements = [...updated.legacy!.achievements, newAch];
+    
+    // Auto-record major life event memory
+    const newMemory = {
+      id: `mem-${id}-${Date.now()}`,
+      title: name,
+      text: description,
+      date: Date.now(),
+      type: 'world' as const
+    };
+    if (!updated.legacy!.memories) updated.legacy!.memories = [];
+    updated.legacy!.memories = [newMemory, ...updated.legacy!.memories];
+    
+    saveCharacter(updated);
+    triggerAlert(`ОТКРЫТО ДОСТИЖЕНИЕ И СОХРАНЕНО ВОСПОМИНАНИЕ: ${name}!`, 'info');
+  };
+
   const triggerAlert = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
     setAlert({ message, type });
     setTimeout(() => {
@@ -780,6 +849,7 @@ export default function App() {
     setGuild(newGuild);
     localStorage.setItem('eq3_guild', JSON.stringify(newGuild));
     
+    grantAchievement('founder', 'Основатель Легионов', `Успешно основана гильдия "${name}". Теперь вы - лидер среди равных.`, '🏰');
     notifyPlayerImpact('Создание гильдии', `Основал могущественную гильдию "${name}" [${tag}]`);
 
     // Deduct cost
@@ -1378,6 +1448,7 @@ export default function App() {
       if (updatedExp >= character.expToNextLevel) {
         updatedLevel += 1;
         leveledUp = true;
+        setPendingLevelUp(updatedLevel);
         expReq = Math.floor(character.expToNextLevel * 1.5);
         hpMax = character.maxHp + 40;
         manaMax = character.maxMana + 25;
@@ -1431,13 +1502,40 @@ export default function App() {
     const npc = mapEntities.find(e => ['merchant', 'quest', 'bot', 'background'].includes(e.type) && e.x === nx && e.y === ny);
     if (npc) {
       if (npc.type === 'merchant') {
-         triggerAlert(`Торговец ${npc.name} предлагает вам свои товары! (Откройте вкладку Рынок)`, 'info');
+         setActiveNpcDialog({
+           npc: { id: npc.id, name: npc.name, role: 'Торговец', emotion: 'Neutral', storyImportant: false },
+           text: `Приветствую, искатель! Мои товары лучшие в этих землях. Взгляни, что я предлагаю сегодня.`,
+           options: [
+             { id: 'shop', text: 'Покажи свои товары.', tone: 'Neutral', action: () => setSelectedTab('merchant') },
+             { id: 'continue', text: 'Я зайду позже.', tone: 'Respectful' }
+           ]
+         });
       } else if (npc.type === 'quest') {
-         triggerAlert(`${npc.name} говорит: "Приветствую, путник. Есть для тебя работенка..."`, 'info');
+         setActiveNpcDialog({
+           npc: { id: npc.id, name: npc.name, role: 'Квестодатель', emotion: 'Happy', storyImportant: true },
+           text: `О, ${character.name}! Ты как раз вовремя. У меня есть для тебя важная задача, если ты готов рисковать.`,
+           options: [
+             { id: 'quest', text: 'Что за задача?', tone: 'Respectful', action: () => setSelectedTab('quests') },
+             { id: 'continue', text: 'У меня сейчас нет времени.', tone: 'Rude' }
+           ]
+         });
       } else if (npc.type === 'bot') {
-         triggerAlert(`Игрок ${npc.name} помахал вам рукой.`, 'info');
+         setActiveNpcDialog({
+           npc: { id: npc.id, name: npc.name, role: 'Искатель приключений', emotion: 'Happy', storyImportant: false },
+           text: `Приветствую, брат по оружию! Как продвигаются твои странствия?`,
+           options: [
+             { id: 'party', text: 'Пошли со мной в группу.', tone: 'Friendly', action: () => setSelectedTab('guild-party') },
+             { id: 'continue', text: 'Мне пора идти.', tone: 'Neutral' }
+           ]
+         });
       } else if (npc.type === 'background') {
-         triggerAlert(`${npc.name} смотрит на вас, но ничего не говорит.`, 'info');
+         setActiveNpcDialog({
+           npc: { id: npc.id, name: npc.name, role: 'Житель', emotion: 'Neutral', storyImportant: false },
+           text: `*Внимательно смотрит на вас, но молчит* ...Этот мир полон опасностей. Береги себя.`,
+           options: [
+             { id: 'continue', text: '*Кивнуть и уйти*', tone: 'Neutral' }
+           ]
+         });
       }
     }
   };
@@ -1493,6 +1591,42 @@ export default function App() {
     });
     setCharacterToDelete(null);
     triggerAlert(`${name} ${t('charDeleted')}.`, 'info');
+  };
+
+  const handleSendChatOOC = async (textMsg: string, channel: string) => {
+    if (!textMsg.trim() || !character) return;
+
+    setIsSendingChat(true);
+    try {
+      const response = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: character.name,
+          channel: channel,
+          text: textMsg,
+          level: character.level,
+          race: character.race,
+          charClass: character.class,
+        }),
+      });
+
+      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          if (data.currentMessages) {
+            setChatMessages(data.currentMessages);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error sending chat message:', err);
+    } finally {
+      setIsSendingChat(false);
+    }
   };
 
   const cancelDeleteCharacter = (e: React.MouseEvent) => {
@@ -2273,13 +2407,31 @@ export default function App() {
 
     // Boss gets exceptional rare drops
     const lootChance = Math.random();
-    if (monster.isBoss || lootChance > 0.65) {
+    let lootItems: Item[] = [];
+    
+    if (monster.isBoss || lootChance > 0.8) {
       const lootTemplates = COMMON_TEMPLATES.merchantItems;
       const index = Math.floor(Math.random() * lootTemplates.length);
       loot = {
         ...lootTemplates[index],
         id: `loot-${Date.now()}`,
       };
+      lootItems.push(loot);
+    }
+    
+    // Have a high chance of dropping materials for crafting
+    if (Math.random() > 0.35) {
+      // @ts-ignore
+      const matTemplates = COMMON_TEMPLATES.materials;
+      if (matTemplates && matTemplates.length) {
+         const mIndex = Math.floor(Math.random() * matTemplates.length);
+         const matLoot = {
+            ...matTemplates[mIndex],
+            id: `mat-${Date.now()}-${Math.random()}`,
+         };
+         lootItems.push(matLoot);
+         if (!loot) loot = matLoot; // to show on the victory screen
+      }
     }
 
     // Process quests goals
@@ -2318,7 +2470,7 @@ export default function App() {
       leveledUp = true;
     }
 
-    const nextInventory = loot ? [...character.inventory, loot] : character.inventory;
+    const nextInventory = [...character.inventory, ...lootItems];
 
     // Recover base health/mana slightly
     const updatedHp = Math.min(character.maxHp, character.hp + Math.floor(character.maxHp * 0.2));
@@ -2345,9 +2497,14 @@ export default function App() {
     });
 
     setCombatOver(true);
+    if (monster.isBoss) {
+       grantAchievement(`kill-boss-${monster.name.replace(/\s+/g, '-')}`, `Смерть Босса: ${monster.name}`, `Одержана великая победа над рейдовым боссом ${monster.name}. Барды слагают песни о вашей силе!`, '⚔️');
+    }
+    
     if (leveledUp) {
       triggerAlert(`ПОЗДРАВЛЯЕМ! Вы получили уровень ${level}! (Ding!)`, 'success');
       notifyPlayerImpact("Сражение и прокачка", `В бою убил монстра ${monster.name} и достиг нового уровня ${level}!`);
+      setPendingLevelUp(level);
     } else {
       triggerAlert(`Победа! Монстр ${monster.name} повержен. Получено ${baseExp} XP!`, 'success');
       if (monster.level >= character.level + 2) {
@@ -2421,6 +2578,9 @@ export default function App() {
     triggerAlert(`Задание "${targetQuest.title}" завершено! Получено +${goldReward} золота и ${expReward} опыта.`, 'success');
     
     notifyPlayerImpact("Выполнение квеста", `Успешно завершил задание "${targetQuest.title}". ${leveledUp ? `К тому же, это позволило достичь нового уровня (${level})!` : ''}`);
+    if (leveledUp) {
+      setPendingLevelUp(level);
+    }
   };
 
   // 8. View Renderers
@@ -2584,13 +2744,71 @@ export default function App() {
 
   return (
     <div className="h-screen bg-slate-1000 font-sans text-gray-200 selection:bg-amber-600 selection:text-white overflow-hidden flex flex-col relative w-full">
+      <div className="scanlines pointer-events-none"></div>
+
+      {activeNpcDialog && (
+         <NPCDialogWindow
+            npc={activeNpcDialog.npc}
+            text={activeNpcDialog.text}
+            options={activeNpcDialog.options}
+            onClose={() => setActiveNpcDialog(null)}
+         />
+      )}
+      
       {/* Background World Effect */}
       <div 
          className="absolute inset-0 z-0 bg-cover bg-center opacity-15 pointer-events-none mix-blend-overlay transition-all duration-1000 ease-in-out transition-opacity"
          style={{ backgroundImage: `url('${activeZone?.imageUrl || 'https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=1920&auto=format&fit=crop'}')` }}
       ></div>
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-slate-950/80 via-slate-950/95 to-slate-1000 pointer-events-none"></div>
-      
+
+      {/* Global Minimap / 2D Iso-World (New) */}
+      {character && !showOnboarding && activeZone && (
+         <Zone2DWorld zone={activeZone} character={character} />
+      )}
+
+      {/* Specialization Selection Modal */}
+      {character && character.level >= 30 && !character.specialization && (
+         <SpecializationModal
+            character={character}
+            language={language}
+            onSelect={(specId) => {
+               saveCharacter({
+                 ...character,
+                 specialization: specId
+               });
+               triggerAlert(`Выбрана новая специализация: ${specId}!`, 'success');
+            }}
+         />
+      )}
+
+      {/* Global Level Up Modal */}
+      {pendingLevelUp && character && (
+         <LevelUpModal
+            character={character}
+            newLevel={pendingLevelUp}
+            language={language}
+            onConfirm={(autoStats, freeStats) => {
+               const combinedStats = { ...character.stats };
+               const keys = ['str', 'sta', 'agi', 'dex', 'int', 'wis', 'cha'] as const;
+               keys.forEach(k => {
+                 combinedStats[k] = Math.round(((combinedStats[k] || 0) + (autoStats[k] || 0) + (freeStats[k] || 0)) * 10) / 10;
+               });
+               
+               const history = character.statAllocationHistory ? [...character.statAllocationHistory] : [];
+               history.push({ level: pendingLevelUp, auto: autoStats });
+
+               saveCharacter({
+                 ...character,
+                 stats: combinedStats,
+                 freeStatPoints: (character.freeStatPoints || 0) + (FREE_STATS_PER_LEVEL - Object.values(freeStats).reduce((a,b)=>Number(a||0)+Number(b||0),0)),
+                 statAllocationHistory: history
+               });
+               setPendingLevelUp(null);
+            }}
+         />
+      )}
+
       {/* 1. Global Alert Toast */}
       {alert && (
         <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[100] p-4 rounded-xl border shadow-[0_0_30px_rgba(0,0,0,0.5)] max-w-md w-[90%] sm:w-auto flex items-start gap-4 animate-slide-down backdrop-blur-xl ${
@@ -2715,154 +2933,92 @@ export default function App() {
         </div>
       )}
 
-      {/* 2. Top HUD (MMORPG Style) */}
-      <div className="absolute top-4 left-4 z-40 bg-slate-900/80 backdrop-blur-md border border-slate-700/80 p-2 pr-6 rounded-full flex items-center gap-4 shadow-xl">
+      {/* 2. Classic Unit Frame HUD - Bottom Left */}
+      <div className="absolute top-2 md:top-auto md:bottom-28 left-2 md:left-4 z-40 bg-leather border-metal p-1.5 md:p-2 pr-4 md:pr-6 flex items-center gap-2 md:gap-4 shadow-[0_10px_20px_rgba(0,0,0,0.8)] select-none">
         <div 
-           className="relative h-14 w-14 rounded-full bg-slate-950 border-2 border-amber-600 flex flex-col items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:border-amber-400 transition-colors" 
+           className="relative h-12 w-12 md:h-16 md:w-16 border-2 border-[#1a202c] shadow-[inset_0_0_10px_rgba(0,0,0,0.8)] bg-slate-950 flex flex-col items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:border-amber-400 transition-colors" 
            onClick={() => setSelectedTab('character')}
            title="Character Profile"
         >
-           <User className="h-6 w-6 text-amber-500 mb-1.5" />
-           <div className="absolute bottom-0 w-full bg-slate-900 text-center text-[10px] font-bold text-amber-400 leading-tight border-t border-amber-600/50 pt-0.5 pb-0.5">
+           <img 
+               src={getCharacterAvatarUrl(character)} 
+               alt="Hero" 
+               className="absolute inset-x-0 bottom-0 w-full h-[120%] object-contain object-bottom mb-2 md:mb-1" 
+           />
+           <div className="absolute top-0 right-0 bg-[#1a202c] text-center text-[10px] font-bold text-amber-400 leading-tight px-1 border-b border-l border-[#333] z-10">
              {character.level}
            </div>
         </div>
-        <div className="w-36 sm:w-48 space-y-1.5">
-          <div className="flex justify-between items-end mb-1">
-            <span className="font-bold text-white text-sm leading-none drop-shadow-md">{character.name}</span>
-            <span className="text-[9px] text-slate-300 font-mono leading-none">{character.class}</span>
+        <div className="w-28 md:w-48 space-y-1">
+          <div className="flex justify-between items-end mb-1 px-1">
+            <span className="font-bold text-amber-300 text-[11px] md:text-sm leading-none drop-shadow-[1px_1px_0_#000] truncate max-w-[80px] md:max-w-none">{character.name}</span>
+            <span className="text-[8px] md:text-[9px] text-[#aaa] font-mono leading-none hidden md:inline drop-shadow-[1px_1px_0_#000]">{character.class}</span>
           </div>
-          {/* Health Bar */}
-          <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800 shadow-inner relative group cursor-help">
-            <div className="bg-red-500 h-full transition-all duration-300 relative">
-               {/* Shine effect */}
-               <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/30"></div>
-            </div>
-            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white opacity-0 group-hover:opacity-100">{character.hp} / {character.maxHp}</span>
+          {/* Health Bar (Classic green) */}
+          <div className="w-full bg-[#111] border border-[#222] shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] h-3 md:h-4 relative group cursor-help">
+            <div className="bg-gradient-to-b from-[#4CAF50] to-[#1B5E20] h-full transition-all duration-300 border-t border-white/20" style={{ width: `${(character.hp / character.maxHp) * 100}%` }}></div>
+            <span className="absolute inset-0 flex items-center justify-center text-[8px] md:text-[10px] font-bold text-white drop-shadow-[1px_1px_0_#000] opacity-0 group-hover:opacity-100">{character.hp} / {character.maxHp}</span>
           </div>
-          {/* Mana Bar */}
-          <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800 shadow-inner relative group cursor-help">
-            <div className="bg-cyan-500 h-full transition-all duration-300 relative">
-               {/* Shine effect */}
-               <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/30"></div>
-            </div>
-            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white opacity-0 group-hover:opacity-100">{character.mana} / {character.maxMana}</span>
+          {/* Mana Bar (Classic blue) */}
+          <div className="w-full bg-[#111] border border-[#222] shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] h-2.5 md:h-3 relative group cursor-help">
+            <div className="bg-gradient-to-b from-[#2196F3] to-[#0D47A1] h-full transition-all duration-300 border-t border-white/20" style={{ width: `${(character.mana / character.maxMana) * 100}%` }}></div>
+            <span className="absolute inset-0 flex items-center justify-center text-[8px] md:text-[10px] font-bold text-white drop-shadow-[1px_1px_0_#000] opacity-0 group-hover:opacity-100">{character.mana} / {character.maxMana}</span>
           </div>
         </div>
       </div>
 
-      {/* TOP RIGHT: Minimap / Zone Info */}
-      <div className="absolute top-4 right-4 z-40 flex flex-col items-end gap-2">
-         {/* Zone Name Header */}
+      {/* TOP RIGHT: Global Map Button (Classic mini-map spot) & Settings */}
+      <div className="absolute top-2 md:top-4 right-2 md:right-4 z-40 flex flex-col items-end gap-2 md:gap-4 pointer-events-none">
+         {/* Map Button */}
          <div 
-            className="bg-slate-900/80 backdrop-blur-md rounded border border-slate-700/80 px-4 py-2 text-right flex flex-col items-end shadow-xl cursor-default group hover:bg-slate-800 transition-colors" 
-            onClick={() => setShowServerPanel(true)}
+            className="w-14 h-14 md:w-20 md:h-20 rounded-full border-metal bg-leather flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.8)] cursor-pointer hover:scale-105 active:scale-95 transition-transform pointer-events-auto group relative" 
+            onClick={() => setSelectedTab('worldmap')}
+            title="World Map (M)"
          >
-            <div className="text-white font-bold text-sm tracking-widest drop-shadow-md flex items-center gap-2">
-               <MapPin className="h-4 w-4 text-emerald-500" />
-               {activeZone.name}
-            </div>
-            <div className="text-[10px] text-amber-500 font-mono drop-shadow-md mt-0.5">{t('simulatedServerInfo')}</div>
+            <div className="absolute inset-1 rounded-full border-2 border-dashed border-[#555] pointer-events-none opacity-50" />
+            <Globe className="h-6 w-6 md:h-10 md:w-10 text-[#d4af37] drop-shadow-[2px_2px_0_#000] group-hover:text-amber-300" />
             
-            {/* Extended Server Stats shown on hover/click */}
-            <div className="hidden group-hover:flex gap-3 text-[9px] text-slate-400 mt-2 uppercase font-bold bg-slate-950 p-1.5 rounded">
-               <span>PVP: OFF</span>
-               <span>CH: 1</span>
-               <span>PING: 14ms</span>
+            {/* Zone Name tooltip */}
+            <div className="absolute -bottom-6 w-max right-1/2 translate-x-1/2 bg-parchment border border-metal px-3 py-1 shadow-[0_4px_10px_rgba(0,0,0,0.5)] pointer-events-none z-10 flex flex-col items-center">
+               <span className="text-[#3e2723] font-bold text-[9px] md:text-xs tracking-widest uppercase">{activeZone.name}</span>
             </div>
          </div>
-         {/* Settings / Lang / Logout */}
-         <div className="flex gap-2">
+         
+         {/* Settings / Gold row */}
+         <div className="flex gap-1.5 md:gap-2 items-center pointer-events-auto">
+            {/* Gold Dropdown */}
+            <div className="flex items-center gap-1 md:gap-1.5 bg-leather border border-metal backdrop-blur px-2.5 md:px-3 py-1 md:py-1.5 shadow-[0_4px_10px_rgba(0,0,0,0.5)]">
+               <Coins className="h-3 w-3 md:h-4 md:w-4 text-amber-400" />
+               <span className="font-bold text-amber-400 text-[9px] md:text-xs font-mono drop-shadow-[1px_1px_0_#000]">{character.gold}</span>
+            </div>
+            {/* Settings etc */}
             <button
                onClick={() => setLanguage(language === 'ru' ? 'en' : 'ru')}
-               className="h-7 w-7 flex items-center justify-center font-bold bg-slate-800/80 hover:bg-slate-700 backdrop-blur text-slate-300 rounded cursor-pointer transition-all border border-slate-600 text-[10px] shadow"
+               className="h-6 w-6 md:h-7 md:w-7 flex items-center justify-center font-bold bg-slate-800/80 hover:bg-slate-700 backdrop-blur text-slate-300 rounded cursor-pointer transition-all border border-slate-600 text-[9px] md:text-[10px] shadow"
                title="Language"
             >
                {language === 'ru' ? 'EN' : 'RU'}
             </button>
             <button 
                onClick={handleLogoutToSelect}
-               className="h-7 w-7 flex items-center justify-center bg-slate-800/80 hover:bg-slate-700 backdrop-blur border border-slate-600 hover:text-amber-400 rounded cursor-pointer transition-colors shadow"
+               className="h-6 w-6 md:h-7 md:w-7 flex items-center justify-center bg-slate-800/80 hover:bg-slate-700 backdrop-blur border border-slate-600 hover:text-amber-400 rounded cursor-pointer transition-colors shadow"
                title="Change Character"
             >
-               <Users className="h-3.5 w-3.5" />
+               <Users className="h-3 w-3 md:h-3.5 md:w-3.5" />
             </button>
             <button 
                onClick={() => { localStorage.removeItem('eq3_user_session'); setUser(null); }}
-               className="h-7 w-7 flex items-center justify-center bg-rose-950/80 hover:bg-rose-900 backdrop-blur border border-rose-800/80 text-rose-300 hover:text-white rounded cursor-pointer transition-colors shadow"
+               className="h-6 w-6 md:h-7 md:w-7 flex items-center justify-center bg-rose-950/80 hover:bg-rose-900 backdrop-blur border border-rose-800/80 text-rose-300 hover:text-white rounded cursor-pointer transition-colors shadow"
                title="Logout"
             >
-               <LogOut className="h-3.5 w-3.5" />
+               <LogOut className="h-3 w-3 md:h-3.5 md:w-3.5" />
             </button>
-         </div>
-         {/* Gold Dropdown */}
-         <div className="flex items-center gap-1.5 bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-full border border-slate-700/80 mt-1 shadow-lg">
-            <Coins className="h-4 w-4 text-amber-400" />
-            <span className="font-bold text-amber-400 text-xs font-mono">{character.gold}</span>
          </div>
       </div>
 
-      <main className="flex-1 w-full flex overflow-hidden pt-24 pb-32 relative z-10 px-4 gap-6 lg:gap-8 max-w-[100vw]">
+      <main className="flex-1 w-full flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pt-32 md:pt-32 pb-24 md:pb-32 relative z-10 px-2 md:px-4 gap-6 lg:gap-8 max-w-[100vw]">
 
-        {/* MMO Floating Chat HUD */}
-        <div className="hidden md:flex fixed bottom-28 left-4 lg:left-[340px] z-[60] flex-col pointer-events-auto transition-all group">
-          {/* Toggle Button */}
-          <button 
-            type="button"
-            onClick={() => setIsChatVisible(!isChatVisible)}
-            className={`absolute ${isChatVisible ? '-top-6' : 'top-0'} left-0 bg-slate-900/80 border border-slate-700/50 text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400 hover:text-amber-400 px-2 py-1 rounded shadow-sm transition-all z-10 ${
-              isChatVisible ? 'opacity-0 group-hover:opacity-100' : 'opacity-100 hover:scale-105'
-            }`}
-          >
-            {isChatVisible ? 'Скрыть чат' : 'Показать чат'}
-          </button>
-          
-          {isChatVisible && (
-            <div className="w-[22rem] h-56 bg-gradient-to-t from-slate-950/90 to-transparent flex flex-col rounded border-b border-amber-900/50 hover:bg-slate-950/80 hover:border hover:border-slate-700/50">
-               {/* Chat Log Viewport */}
-               <div className="flex-1 overflow-y-auto px-2 py-1 space-y-1 text-[10px] font-mono leading-tight custom-scrollbar flex flex-col justify-end pb-2">
-                 {chatMessages.length === 0 ? (
-                   <div className="text-slate-600 italic">No messages...</div>
-                 ) : (
-                   chatMessages.slice(-15).map(msg => (
-                     <div key={msg.id} className="drop-shadow-md bg-slate-950/40 px-1 py-0.5 rounded">
-                        <span className={`font-bold transition-all text-[9px] uppercase ${
-                          msg.channel === 'System'
-                            ? 'text-red-400'
-                            : msg.channel === 'Auction'
-                            ? 'text-emerald-400'
-                            : msg.channel === 'Shout'
-                            ? 'text-amber-400 font-extrabold animate-pulse'
-                            : msg.channel === 'Guild'
-                            ? 'text-purple-400'
-                            : 'text-violet-300'
-                        }`}>
-                          [{msg.channel === 'System' ? 'Система' : msg.channel === 'Auction' ? 'Торг' : msg.channel === 'Shout' ? 'Крик' : msg.channel === 'Guild' ? 'ГИ' : msg.channel}]
-                        </span>{' '}
-                        <span className="text-white font-extrabold cursor-pointer hover:text-amber-400">{msg.sender}:</span>{' '}
-                        <span className="text-slate-200">{msg.text}</span>
-                     </div>
-                   ))
-                 )}
-               </div>
-               
-               {/* Quick Input Bar - Shows on Hover */}
-               <form 
-                  onSubmit={handleSendChat}
-                  className="px-2 py-1.5 border-t border-slate-700/80 bg-slate-900/90 hidden group-hover:flex items-center gap-1.5 transition-all w-full"
-               >
-                  <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider font-mono">[{chatChannel === 'OOC' ? 'Флуд' : chatChannel === 'Auction' ? 'Торг' : chatChannel === 'Guild' ? 'ГИ' : chatChannel === 'Shout' ? 'Крик' : 'Сказать'}]</span>
-                  <input
-                     type="text"
-                     placeholder="Нажмите Enter, чтобы сказать..."
-                     value={chatInput}
-                     onChange={(e) => setChatInput(e.target.value)}
-                     className="flex-1 bg-transparent border-none text-[10px] font-mono text-white placeholder-slate-500 focus:outline-none focus:ring-0"
-                  />
-               </form>
-            </div>
-          )}
-        </div>
+        {/* Old Floating Chat Removed */}
         
         {/* ================= LEFT ASIDE PANEL: Status / Character Sheet ================= */}
         <aside className="hidden lg:flex flex-col w-[320px] shrink-0 space-y-5 overflow-y-auto overflow-x-hidden custom-scrollbar pr-2 pb-16">
@@ -2871,12 +3027,12 @@ export default function App() {
           <section className="bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-0.5 shadow-2xl overflow-hidden relative h-[400px] flex flex-col group ring-1 ring-black/50">
             <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-slate-950/80 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-slate-700/60 shadow-lg">
                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-               <span className="text-[9px] font-mono font-bold text-slate-200 uppercase tracking-widest drop-shadow-sm">3D Persona View</span>
+               <span className="text-[9px] font-mono font-bold text-slate-200 uppercase tracking-widest drop-shadow-sm">2D Persona View</span>
             </div>
             
-            <div className="flex-1 w-full h-full relative z-0 bg-slate-950/50 rounded-xl overflow-hidden">
+            <div className="flex-1 w-full h-full relative z-0 bg-slate-950/50 rounded-xl overflow-hidden min-h-[300px]">
                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-900/20 pointer-events-none z-10" />
-               <Character3DModel 
+               <Character2DModel 
                   charClass={character.class} 
                   race={character.visualCustomization?.skinType?.split(' ')[0] || character.race} 
                   equipment={{ ...character.equipment, ...(character.visualCustomization?.transmogs || {}) }} 
@@ -2922,6 +3078,19 @@ export default function App() {
                 <span className="text-slate-400 font-medium">ХАР (Харизма)</span>
                 <span className="font-black text-pink-300 drop-shadow-sm text-xs">{character.stats.cha}</span>
               </div>
+              
+              <StatManager 
+                 character={character} 
+                 language={language} 
+                 onSave={(newStats, remain) => {
+                    saveCharacter({
+                       ...character,
+                       stats: newStats,
+                       freeStatPoints: remain
+                    });
+                 }} 
+              />
+
               <div className="flex justify-between items-center bg-slate-950/80 p-2.5 rounded-lg border border-amber-500/20 mt-4 shadow-inner ring-1 ring-amber-500/10">
                 <span className="text-amber-500 font-bold uppercase tracking-widest text-[9px]">Exp до Уровня</span>
                 <span className="font-black text-amber-400 text-xs">{character.exp} / {character.expToNextLevel}</span>
@@ -2993,61 +3162,77 @@ export default function App() {
         {/* ================= CENTER PANELS: Main Game Viewport & Tabs ================= */}
         <section className="flex-1 flex flex-col min-w-0 h-full relative">
           
-          {/* Action Bar (MMO Top/Bottom Hotbar) */}
-          <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-5xl px-4 flex flex-col items-center group/hotbar">
+          {/* Action Bar (MMO Top/Bottom Hotbar) - ADAPTIVE */}
+          <div className="fixed bottom-0 md:bottom-2 left-0 md:left-1/2 md:-translate-x-1/2 z-50 w-full md:max-w-[800px] flex flex-col group/hotbar pb-safe drop-shadow-2xl">
             {/* EXP Bar overlay */}
-            <div className="w-full bg-slate-950/80 h-2.5 border border-slate-700/50 rounded-t-xl overflow-hidden relative shadow-lg backdrop-blur-sm pointer-events-none">
+            <div className="w-full h-1.5 md:h-2.5 bg-[#111] border-t-2 border-l-2 border-r-2 border-metal overflow-hidden relative" style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.8)' }}>
                <div 
-                  className="bg-gradient-to-r from-purple-700 via-fuchsia-500 to-pink-500 h-full transition-all duration-500 ease-in-out shadow-[0_0_12px_rgba(217,70,239,0.8)]"
+                  className="bg-gradient-to-r from-purple-700 via-fuchsia-500 to-pink-500 h-full transition-all duration-500 ease-in-out border-t border-white/20"
                   style={{ width: `${(character.exp / character.expToNextLevel) * 100}%` }}
                />
                {/* Notches */}
                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI0Ij48cmVjdCB3aWR0aD0iMSIgaGVpZ2h0PSI0IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNCkiLz48L3N2Zz4=')] opacity-60"></div>
             </div>
             
-            <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-700/50 p-2 sm:p-3 rounded-b-2xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 w-full relative group-hover/hotbar:border-slate-600/60 transition-colors">
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-amber-900/5 pointer-events-none rounded-b-2xl" />
+            <div className="bg-wood border-metal p-2 md:p-3 shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex overflow-x-auto no-scrollbar md:flex-wrap items-center justify-start md:justify-center gap-2 sm:gap-2.5 w-full relative pointer-events-auto snap-x relative">
+              {/* Iron rivets */}
+              <div className="absolute top-1 left-1 w-2 h-2 rounded-full bg-[#333] shadow-[inset_1px_1px_rgba(255,255,255,0.4)] border border-[#111]" />
+              <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#333] shadow-[inset_1px_1px_rgba(255,255,255,0.4)] border border-[#111]" />
+              <div className="absolute bottom-1 left-1 w-2 h-2 rounded-full bg-[#333] shadow-[inset_1px_1px_rgba(255,255,255,0.4)] border border-[#111]" />
+              <div className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-[#333] shadow-[inset_1px_1px_rgba(255,255,255,0.4)] border border-[#111]" />
+
               {[
-                { id: 'worldmap', icon: Globe, label: t('worldmap'), key: '1' },
-                { id: 'events', icon: Calendar, label: t('events' as any), key: 'E' },
-                { id: 'zones', icon: Compass, label: t('zones'), key: '2' },
-                { id: 'lore', icon: BookOpen, label: t('lore'), key: '3' },
-                { id: 'quests', icon: Database, label: t('quests'), key: '4' },
-                { id: 'merchant', icon: ShoppingCart, label: t('merchant'), key: '5' },
+                { id: 'zones', icon: Compass, label: t('zones'), key: '1' },
                 { id: 'character', icon: User, label: t('character'), key: 'C' },
-                { id: 'guild-party', icon: Users, label: t('guild-party'), key: 'G' },
+                { id: 'quests', icon: Database, label: t('quests'), key: 'Q' },
+                { id: 'merchant', icon: ShoppingCart, label: t('merchant'), key: 'B' },
+                { id: 'auction', icon: Coins, label: t('auction' as any), key: 'A' },
+                { id: 'bank', icon: Box, label: t('bank' as any), key: 'V' },
+                { id: 'mail', icon: Mail, label: t('mail' as any), key: 'M' },
+                { id: 'crafting-market', icon: Hammer, label: t('craft-market'), key: 'F' },
+                { id: 'legacy', icon: Star, label: t('legacy' as any), key: 'L' },
+                { id: 'guild-party', icon: Shield, label: t('guild-party'), key: 'G' },
                 { id: 'chat', icon: MessageSquare, label: t('chat'), key: 'Enter' },
-                { id: 'progression', icon: GraduationCap, label: t('progression'), key: 'T' },
-                { id: 'dungeons', icon: Flame, label: t('dungeons'), key: 'R' },
-                { id: 'arena', icon: Swords, label: t('arena' as any), key: 'A' },
-                { id: 'crafting-market', icon: Hammer, label: t('craft-market'), key: 'M' },
-                { id: 'pets-housing', icon: Sparkles, label: t('pets-housing'), key: 'P' },
-                { id: 'companions', icon: HeartHandshake, label: language === 'ru' ? 'Лагерь' : 'Camp', key: 'L' },
               ].map((btn) => {
                 const isActive = selectedTab === btn.id && (!inCombat || btn.id !== 'zones');
                 return (
                   <button
                     key={btn.id}
-                    onClick={() => { setSelectedTab(btn.id as any); if(btn.id === 'zones') setInCombat(false); }}
-                    className={`group relative shrink-0 h-10 w-10 sm:h-12 sm:w-auto sm:px-3 sm:py-1.5 rounded-lg transition-all flex flex-col justify-center items-center gap-1 cursor-pointer overflow-hidden ${
+                    onClick={() => {
+                      setSelectedTab(btn.id as any);
+                      if (btn.id === 'zones') setInCombat(false);
+                    }}
+                    className={`group relative shrink-0 h-14 w-14 md:h-[64px] md:w-[64px] rounded-lg transition-all flex flex-col justify-center items-center cursor-pointer overflow-hidden snap-center select-none touch-manipulation border-[3px] shadow-[0_4px_10px_rgba(0,0,0,0.8)] ${
                       isActive
-                        ? 'bg-slate-800/90 border border-amber-500/60 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)]' 
-                        : 'bg-transparent border border-transparent text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 hover:border-slate-700'
+                        ? 'bg-[#2a241f] border-[#d4af37] shadow-[0_0_15px_rgba(212,175,55,0.6)]' 
+                        : 'bg-[#1a1714] border-[#5c4a3d] hover:border-[#a68c70]'
                     }`}
                     title={btn.label}
                   >
-                    {isActive && <div className="absolute inset-0 bg-gradient-to-t from-amber-500/10 to-transparent opacity-50" />}
-                    <btn.icon className={`h-5 w-5 relative z-10 transition-transform group-hover:scale-110 ${btn.id === 'dungeons' && !isActive ? 'text-red-400/80 group-hover:text-red-400' : ''}`} />
-                    <span className="hidden sm:block text-[9px] font-bold uppercase tracking-wider font-mono relative z-10">
-                      {btn.label}
-                    </span>
+                    {/* Dark stone/leather texture background */}
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-mamba.png')] opacity-40 mix-blend-overlay pointer-events-none" />
                     
-                    {/* Hotkey Hint */}
-                    <span className={`absolute -top-1.5 -right-1.5 text-[8px] font-mono font-bold px-1 rounded-sm shadow-sm border ${
-                      isActive
-                       ? 'bg-amber-500 text-slate-950 border-amber-600'
-                       : 'bg-slate-900 border-slate-700/50 text-slate-500 group-hover:text-amber-500/70 group-hover:border-amber-500/30'
-                    }`}>
+                    {/* Golden hover glow */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#d4af37]/0 to-[#d4af37]/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+                    {/* Rift Energy highlight (Etheria thematic) */}
+                    <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#9333ea] to-transparent opacity-50 blur-[2px] transition-all ${isActive ? 'h-2 opacity-80' : 'group-hover:opacity-70'}`} />
+
+                    <div className="relative z-10 w-full h-full flex flex-col items-center justify-center pt-1 transition-transform group-hover:scale-105">
+                       <btn.icon className={`h-6 w-6 md:h-7 md:w-7 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] ${
+                         isActive ? 'text-[#fef08a]' : 'text-[#d8c3a5] group-hover:text-[#fde047]'
+                       }`} />
+                       
+                       <span className="hidden md:block text-[8px] font-bold uppercase tracking-wider font-serif text-[#c4b59d] mt-1 drop-shadow-[1px_1px_1px_rgba(0,0,0,1)]">
+                         {btn.label}
+                       </span>
+                    </div>
+                    
+                    {/* Inner bevel for 3D effect */}
+                    <div className="absolute inset-0 shadow-[inset_0_2px_4px_rgba(255,255,255,0.1),inset_0_-2px_4px_rgba(0,0,0,0.6)] pointer-events-none rounded-sm" />
+                    
+                    {/* Hotkey Hint - Desktop Only */}
+                    <span className="hidden md:flex absolute top-0.5 right-0.5 text-[9px] font-mono font-bold w-4 h-4 items-center justify-center rounded bg-[#0a0907]/80 text-[#a68c70] border border-[#3d2e1f] leading-none opacity-90 shadow-sm drop-shadow-none z-20 group-hover:text-[#fde047] group-hover:border-[#d4af37]">
                       {btn.key}
                     </span>
                   </button>
@@ -3077,322 +3262,27 @@ export default function App() {
           {/* Actual Combat View Overlay - takes precedence if inCombat is true */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-2 pb-14 space-y-4">
             {inCombat && combatMonster ? (
-            <div className="bg-slate-900 border border-amber-600/30 rounded-lg p-5 shadow-xl animate-fade-in relative space-y-4">
-              
-              <div className="absolute top-3 right-3 bg-red-950 border border-red-800 text-red-400 text-[10px] px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wide">
-                Active Dungeon Battle
-              </div>
-
-              {/* Retro Canvas 2D Battle Arena */}
-              <Combat2DArena
-                character={character}
-                activeZone={activeZone}
-                combatParty={combatParty}
-                combatMonster={combatMonster}
-                visualTrigger={combatVisualEvent}
-              />
-
-              {/* Monster & Party pools */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-slate-700/50 pb-6 relative z-10">
-                
-                {/* Monster */}
-                <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-red-900/30 p-5 shadow-xl relative overflow-hidden group hover:border-red-500/40 transition-colors">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-red-600/10 transition-colors" />
-                  
-                  <div className="flex justify-between items-start mb-3 relative z-10">
-                    <div>
-                      <span className="flex items-center gap-2 text-base font-black text-white tracking-tight drop-shadow-sm">
-                        <Sword className="h-5 w-5 text-red-500 animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-                        {combatMonster.name} {combatMonster.isBoss && '👹 (Boss)'}
-                      </span>
-                      <span className="text-[10px] text-red-400/80 font-mono font-bold uppercase tracking-widest mt-1 block">Level {combatMonster.level} Entity</span>
-                    </div>
-                    <div className="text-right">
-                       <span className="text-[10px] text-slate-500 font-mono uppercase tracking-widest block mb-0.5">Target HP</span>
-                       <span className="font-black text-red-400 font-mono drop-shadow-sm">{combatMonster.hp} / {combatMonster.maxHp}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="w-full bg-slate-950/80 rounded-full h-3 overflow-hidden shadow-inner ring-1 ring-red-900/20 relative z-10">
-                    <div 
-                      className="bg-gradient-to-r from-red-800 to-red-500 h-full transition-all duration-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
-                      style={{ width: `${(combatMonster.hp / combatMonster.maxHp) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* You & Your Companion Mates */}
-                <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-blue-900/20 p-5 shadow-xl relative overflow-hidden group hover:border-blue-500/30 transition-colors flex flex-col justify-between space-y-4">
-                  <div className="absolute top-0 left-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-blue-500/10 transition-colors" />
-                  
-                  <div className="space-y-4 relative z-10">
-                    <span className="text-[10px] text-blue-400/80 uppercase font-mono tracking-widest font-bold block flex items-center gap-2">
-                       <Shield className="h-3.5 w-3.5 text-blue-500" />
-                       Party Status
-                    </span>
-                    
-                    {/* Yourself */}
-                    <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
-                      <div className="flex justify-between items-end mb-1.5">
-                        <div>
-                           <span className="text-xs font-black text-white drop-shadow-sm block leading-none mb-1">{character.name}</span>
-                           <span className="text-[9px] text-emerald-400 font-mono uppercase font-bold tracking-wider leading-none">(You)</span>
-                        </div>
-                        <span className="text-xs font-black text-emerald-300 font-mono">{character.hp} / {character.maxHp} HP</span>
-                      </div>
-                      <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden shadow-inner ring-1 ring-black">
-                        <div 
-                          className="bg-emerald-500 h-full transition-all duration-300 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
-                          style={{ width: `${(character.hp / character.maxHp) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Companions AI */}
-                    <div className="space-y-2.5 pl-2 border-l border-slate-800">
-                      {combatParty.map((mate, i) => (
-                        <div key={i} className="relative">
-                          <div className="flex justify-between items-end mb-1">
-                            <div>
-                               <span className="text-[11px] font-bold text-slate-200 block leading-none mb-0.5">{mate.name}</span>
-                               <span className="text-[8px] text-cyan-500 font-mono uppercase tracking-wider leading-none">({mate.class})</span>
-                            </div>
-                            <span className="text-[10px] text-slate-400 font-mono font-bold">{mate.hp} / {mate.maxHp} HP</span>
-                          </div>
-                          <div className="w-full bg-slate-950 rounded-full h-1 overflow-hidden">
-                            <div 
-                              className="bg-cyan-500 h-full transition-all shadow-[0_0_5px_rgba(6,182,212,0.5)]"
-                              style={{ width: `${(mate.hp / mate.maxHp) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Active Party Buffs Section */}
-                  <div className="pt-4 border-t border-slate-800/80 relative z-10 w-full mt-auto">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] text-amber-500 uppercase font-mono tracking-widest font-bold flex items-center gap-1.5">
-                        <Sparkles className="h-3.5 w-3.5 text-amber-500 animate-pulse drop-shadow-[0_0_5px_rgba(245,158,11,0.8)]" />
-                        Active enhancements
-                      </span>
-                      <span className="text-[9px] text-slate-400 font-mono bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
-                        {activeBuffs.length} Active
-                      </span>
-                    </div>
-
-                    {activeBuffs.length > 0 ? (
-                      <div className="space-y-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
-                        {activeBuffs.map((buff) => (
-                          <div 
-                            key={buff.id} 
-                            className="bg-slate-950/60 border border-slate-700/50 rounded-lg p-2.5 flex items-start justify-between gap-2 transition-all duration-200 hover:border-amber-500/30 group/buff"
-                          >
-                            <div className="space-y-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-amber-300 text-xs truncate drop-shadow-sm">
-                                  {buff.name}
-                                </span>
-                                <span className="text-[9px] text-slate-500 shrink-0 font-mono uppercase tracking-wider">
-                                  by {buff.provider}
-                                </span>
-                              </div>
-                              <p className="text-[10px] text-slate-300 leading-tight">
-                                {buff.effect}
-                              </p>
-                            </div>
-                            <div className="bg-amber-950/60 border border-amber-500/30 rounded px-2 py-1 text-amber-400 text-[10px] font-black shrink-0 font-mono group-hover/buff:shadow-[0_0_8px_rgba(245,158,11,0.3)]">
-                              {buff.duration} {buff.duration === 1 ? 'rnd' : 'rnds'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-slate-950/40 border border-dashed border-slate-800/80 rounded-lg p-3 text-center text-slate-500 text-[10px] italic font-serif">
-                        No active party enhancements
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* DUNGEON MASTER PROMPT NARRATIVE BOX */}
-              <div className="bg-slate-1000 p-4 rounded-lg border border-amber-900/20 text-sm italic font-serif leading-relaxed text-amber-100/90 relative">
-                <span className="text-[10px] text-amber-500 font-mono font-bold uppercase tracking-wider block mb-1">
-                  ⚔️ Dungeon Master Chronicle
-                </span>
-                {dmLoading && (
-                  <div className="absolute inset-0 bg-slate-900/95 flex items-center justify-center gap-2 rounded-lg">
-                    <Loader2 className="h-5 w-5 text-amber-500 animate-spin" />
-                    <span className="text-xs text-slate-400 font-mono">Formulating combat collision flow...</span>
-                  </div>
-                )}
-                <p className="indent-4">{dmNarrative}</p>
-              </div>
-
-              {/* Action Log List */}
-              <div className="bg-slate-950 rounded p-3 h-28 overflow-y-auto border border-slate-800 text-[11px] font-mono space-y-1">
-                {combatLogs.map((log, i) => (
-                  <div key={i} className={`p-1 rounded ${
-                    log.includes('[WARNING]')
-                      ? 'text-rose-400 bg-rose-950/20'
-                      : log.includes('[PARTY]')
-                      ? 'text-cyan-400 bg-cyan-950/10'
-                      : log.includes('[SYSTEM]')
-                      ? 'text-slate-400 font-bold'
-                      : 'text-slate-300'
-                  }`}>
-                    {log}
-                  </div>
-                ))}
-              </div>
-
-              {/* ACTIONS STRIP OR VICTORY SUMMARY */}
-              {combatOver ? (
-                <div className="bg-slate-950 border border-amber-500/10 rounded-lg p-5 text-center space-y-4">
-                  
-                  {victoryDetails ? (
-                    <div className="space-y-3">
-                      <h4 className="font-serif text-xl font-black text-amber-400 flex items-center justify-center gap-1.5">
-                        <Sparkles className="h-5 w-5 text-amber-500" />
-                        BATTLING VICTORY!
-                      </h4>
-                      <p className="text-xs text-slate-400 font-mono">
-                        {combatMonster.name} lies defeated before your party and fades into planar ashes.
-                      </p>
-                      
-                      <div className="flex justify-center gap-4 text-sm font-mono pt-2">
-                        <div className="bg-slate-900 border border-slate-800 p-3 rounded">
-                          <span className="text-slate-500 block text-[10px]">GOLD LOOT</span>
-                          <span className="font-extrabold text-amber-300">+{victoryDetails.goldEarned} Gold</span>
-                        </div>
-                        <div className="bg-slate-900 border border-slate-800 p-3 rounded">
-                          <span className="text-slate-500 block text-[10px]">EXP EARNED</span>
-                          <span className="font-extrabold text-purple-400">+{victoryDetails.expEarned} XP</span>
-                        </div>
-                      </div>
-
-                      {victoryDetails.itemLooted && (
-                        <div className="max-w-xs mx-auto p-3.5 bg-slate-900 border border-amber-500/20 rounded mt-3">
-                          <span className="text-[10px] text-amber-500 uppercase font-mono font-bold block mb-1">Epic Loot Discovered!</span>
-                          <h5 className="font-bold text-sm text-yellow-300">{victoryDetails.itemLooted.name}</h5>
-                          <span className="text-xs text-slate-400 block mt-1 leading-tight">{victoryDetails.itemLooted.description}</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div>
-                      <h4 className="font-serif text-xl font-bold text-red-500 uppercase">Perished in Battle</h4>
-                      <p className="text-xs text-slate-400 mt-1">Healers dragged your party back. Rest and seek items before engaging tough monsters.</p>
-                    </div>
-                  )}
-
-                  <div className="pt-2">
-                    <button
-                      onClick={() => setInCombat(false)}
-                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-6 py-2.5 rounded uppercase text-xs tracking-wider cursor-pointer"
-                    >
-                      Return to Exploration
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-slate-500 uppercase font-mono font-bold block">Engage Combat Move</span>
-                    <div className="flex items-center gap-3 text-[10px] font-mono">
-                      {comboField.active && (
-                        <span className="text-amber-400 font-bold bg-amber-950/40 px-2 rounded border border-amber-900/50 flex items-center gap-1 animate-pulse">
-                          🔥 COMBO FIELD ACTIVE
-                        </span>
-                      )}
-                      <span className="text-emerald-400 font-bold">Stamina: {stamina}/100</span>
-                      {combatGcd && <span className="text-rose-400 animate-pulse font-bold">[GLOBAL COOLDOWN]</span>}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => handleCombatAction('melee')}
-                      disabled={combatGcd}
-                      className={`font-mono py-2.5 px-4 rounded text-xs shrink-0 flex items-center gap-1.5 transition-all
-                        ${combatGcd 
-                          ? 'bg-slate-800/50 text-slate-600 border border-slate-800/50 cursor-not-allowed' 
-                          : 'bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 hover:text-white cursor-pointer'
-                        }`}
-                    >
-                      <Sword className="h-4 w-4 text-red-400" />
-                      Melee Strike
-                    </button>
-                    
-                    <button
-                      onClick={() => handleCombatAction('dodge')}
-                      disabled={combatGcd || stamina < 30}
-                      title="Consumes 30 Stamina. 100% chance to evade the next monster attack."
-                      className={`font-mono py-2.5 px-4 rounded text-xs shrink-0 flex items-center gap-1.5 transition-all
-                        ${combatGcd || stamina < 30
-                          ? 'bg-slate-800/50 text-slate-600 border border-slate-800/50 cursor-not-allowed' 
-                          : 'bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-400 cursor-pointer hover:text-emerald-300'
-                        }`}
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      Tactical Dodge (30s)
-                    </button>
-
-                    {character.class === 'Warrior' || character.class === 'Paladin' ? (
-                      <button
-                        onClick={() => handleCombatAction('taunt')}
-                        disabled={combatGcd}
-                        className={`font-mono py-2.5 px-4 rounded text-xs shrink-0 flex items-center gap-1.5 transition-all
-                          ${combatGcd
-                            ? 'bg-slate-800/50 text-slate-600 border border-slate-800/50 cursor-not-allowed'
-                            : 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 hover:text-white cursor-pointer'
-                          }`}
-                      >
-                        <Shield className="h-4 w-4 text-emerald-400" />
-                        Guard Taunt
-                      </button>
-                    ) : null}
-
-                    {currentSpells.map(spell => {
-                      const isOnCd = spellCooldowns[spell.id] > 0;
-                      return (
-                      <button
-                        key={spell.id}
-                        onClick={() => handleCombatAction(spell)}
-                        disabled={combatGcd || character.mana < spell.manaCost || isOnCd}
-                        title={spell.effect}
-                        className={`font-mono py-2.5 px-4 rounded text-xs shrink-0 flex items-center gap-1 transition-all relative overflow-hidden
-                          ${combatGcd || character.mana < spell.manaCost || isOnCd
-                            ? 'bg-slate-800/50 text-slate-600 border border-slate-800/50 cursor-not-allowed'
-                            : 'bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-705 hover:text-white cursor-pointer'
-                          }`}
-                      >
-                        {isOnCd && (
-                           <div className="absolute inset-0 bg-black/60 flex items-center justify-center font-black text-rose-500 z-10 backdrop-blur-[1px]">
-                             {spellCooldowns[spell.id]}
-                           </div>
-                        )}
-                        <Wand2 className={`h-4 w-4 ${isOnCd ? 'text-slate-600' : 'text-cyan-400'}`} />
-                        Cast {spell.name} <span className="text-[10px] text-slate-500 ml-1">({spell.manaCost}m)</span>
-                      </button>
-                    )})}
-                  </div>
-                  <div className="w-full bg-slate-900 rounded-full h-1 overflow-hidden">
-                     <div 
-                        className="bg-emerald-400 h-full transition-all duration-300"
-                        style={{ width: `${stamina}%` }}
-                     />
-                  </div>
-                  <p className="text-[10px] text-slate-500 font-mono pt-1">Dodging costs stamina. Spells consume Mana. Actions trigger a 1.2s Global Cooldown.</p>
-                </div>
-              )}
-
-            </div>
-          ) : (
-            /* TAB 1: Explorations & Fighting Monsters */
-            selectedTab === 'zones' && (
+               <ClassicCombatHUD
+                  character={character}
+                  combatMonster={combatMonster}
+                  combatParty={combatParty}
+                  activeBuffs={activeBuffs}
+                  combatLogs={combatLogs}
+                  dmNarrative={dmNarrative}
+                  dmLoading={dmLoading}
+                  combatOver={combatOver}
+                  victoryDetails={victoryDetails}
+                  setInCombat={setInCombat}
+                  comboField={comboField}
+                  stamina={stamina}
+                  combatGcd={combatGcd}
+                  handleCombatAction={handleCombatAction}
+                  currentSpells={currentSpells}
+                  spellCooldowns={spellCooldowns}
+               />
+            ) : (
+              /* TAB 1: Explorations & Fighting Monsters */
+              selectedTab === 'zones' && (
               <div className="bg-slate-900 border border-slate-800 rounded-lg shadow-sm space-y-6 relative overflow-hidden">
                 {/* Active Zone Visual Header */}
                 <div className="relative h-64 w-full flex items-end p-6 border-b border-amber-900/40 overflow-hidden group">
@@ -3946,218 +3836,89 @@ export default function App() {
           )}
 
           {/* TAB 4: Trade Tunnel Merchant Store */}
-          {selectedTab === 'merchant' && (
-            <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-xl space-y-6 animate-fade-in relative overflow-hidden group/merchant min-h-[500px]">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-[80px] pointer-events-none group-hover/merchant:bg-amber-500/10 transition-colors duration-1000" />
-              
-              <div className="border-b border-slate-700/50 pb-4 relative z-10">
-                <h3 className="font-sans text-2xl font-black tracking-tight text-white flex items-center gap-2 drop-shadow-sm">
-                  <ShoppingCart className="h-6 w-6 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-                  Торговец в Туннеле Восточных Степей
-                </h3>
-                <p className="text-xs text-slate-400 mt-2 font-medium max-w-xl leading-relaxed">Покупайте редкое оружие и тяжелую броню, или продавайте добытые трофеи за золото.</p>
-              </div>
-
-              {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-4 bg-slate-950/80 p-4 rounded-xl border border-slate-700/80 shadow-inner relative z-10">
-                <div className="flex-1 space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-widest block drop-shadow-sm">Редкость (Rarity)</label>
-                  <select 
-                    value={merchantFilterRarity}
-                    onChange={(e) => setMerchantFilterRarity(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700/80 text-slate-200 text-sm px-3 py-2 rounded-lg outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 font-medium transition-all shadow-sm"
-                  >
-                    <option value="all">Все (All)</option>
-                    <option value="common">Обычный (Common)</option>
-                    <option value="uncommon">Необычный (Uncommon)</option>
-                    <option value="rare">Редкий (Rare)</option>
-                    <option value="epic">Эпический (Epic)</option>
-                  </select>
-                </div>
-                
-                <div className="flex-1 space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-widest block drop-shadow-sm">Класс (Class)</label>
-                  <select 
-                    value={merchantFilterClass}
-                    onChange={(e) => setMerchantFilterClass(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700/80 text-slate-200 text-sm px-3 py-2 rounded-lg outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 font-medium transition-all shadow-sm"
-                  >
-                    <option value="all">Все Классы</option>
-                    <option value="Warrior">Warrior</option>
-                    <option value="Paladin">Paladin</option>
-                    <option value="Shadow Knight">Shadow Knight</option>
-                    <option value="Cleric">Cleric</option>
-                    <option value="Druid">Druid</option>
-                    <option value="Shaman">Shaman</option>
-                    <option value="Necromancer">Necromancer</option>
-                    <option value="Wizard">Wizard</option>
-                    <option value="Magician">Magician</option>
-                    <option value="Enchanter">Enchanter</option>
-                    <option value="Ranger">Ranger</option>
-                    <option value="Rogue">Rogue</option>
-                    <option value="Monk">Monk</option>
-                    <option value="Bard">Bard</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 relative z-10">
-                {COMMON_TEMPLATES.merchantItems
-                  .filter(item => {
-                    if (merchantFilterRarity !== 'all' && item.rarity !== merchantFilterRarity) return false;
-                    if (merchantFilterClass !== 'all' && item.allowedClasses && !item.allowedClasses.includes(merchantFilterClass as any)) return false;
-                    return true;
-                  })
-                  .map((item) => (
-                  <div key={item.id} className="bg-slate-900/60 border border-slate-700/50 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm hover:border-slate-600 transition-colors">
-                    <div>
-                      <div className="flex justify-between items-start gap-3">
-                        <span className={`font-sans font-bold text-base tracking-tight ${
-                          item.rarity === 'epic' ? 'text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]' 
-                            : item.rarity === 'rare' ? 'text-blue-400' 
-                            : 'text-slate-200'
-                        }`}>
-                          {item.name}
-                        </span>
-                        
-                        <span className="text-[10px] font-mono uppercase bg-slate-950/60 px-2 py-1 rounded text-slate-400 font-bold border border-slate-800">{item.slot} slot</span>
-                      </div>
-                      <p className="text-xs text-slate-400 mt-2 font-serif leading-relaxed line-clamp-2">{item.description}</p>
-                      
-                      {/* Stats list */}
-                      <div className="flex flex-wrap gap-2 text-[10px] font-mono text-amber-500/90 mt-3 border-b border-slate-700/50 pb-3">
-                        {item.stats.str && <span className="bg-amber-500/10 px-1.5 py-0.5 rounded">STR +{item.stats.str}</span>}
-                        {item.stats.sta && <span className="bg-amber-500/10 px-1.5 py-0.5 rounded">STA +{item.stats.sta}</span>}
-                        {item.stats.agi && <span className="bg-amber-500/10 px-1.5 py-0.5 rounded">AGI +{item.stats.agi}</span>}
-                        {item.stats.mana && <span className="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">Mana +{item.stats.mana}</span>}
-                        {item.stats.hp && <span className="bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded">HP +{item.stats.hp}</span>}
-                        {item.stats.ac && <span className="bg-slate-500/20 text-slate-300 px-1.5 py-0.5 rounded">AC +{item.stats.ac}</span>}
-                      </div>
-
-                      {/* Class list */}
-                      <div className="mt-2.5">
-                        <span className="text-[9px] font-mono text-slate-500 uppercase font-bold tracking-wider">
-                          {item.allowedClasses ? `Classes: ${item.allowedClasses.join(', ')}` : 'ALL CLASSES'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center border-t border-slate-700/50 pt-3">
-                      <span className="font-mono text-amber-400 font-black text-sm flex items-center gap-1.5">
-                        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-amber-300 to-yellow-600 border border-yellow-200/50 shadow-inner" />
-                        {item.price} gold
-                      </span>
-                      <button
-                        onClick={() => handlePurchaseItem(item)}
-                        className="bg-slate-800 hover:bg-amber-500 text-amber-400 hover:text-slate-950 font-black px-4 py-2 border border-slate-600 hover:border-amber-400 rounded-lg text-xs transition-all cursor-pointer uppercase tracking-widest shadow-sm hover:scale-[1.02] active:scale-[0.98]"
-                      >
-                        Buy
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {selectedTab === 'merchant' && character && (
+            <div className="w-full flex-1">
+               <MerchantTab 
+                  character={character}
+                  handlePurchaseItem={handlePurchaseItem}
+                  language={language}
+               />
             </div>
           )}
 
-          {/* TAB 5: Inventory list and stats list explicitly */}
+          {/* TAB: Auction House */}
+          {selectedTab === 'auction' && character && (
+            <div className="w-full flex-1">
+               <AuctionHouseTab 
+                  character={character} 
+                  language={language}
+                  onUpdateCharacter={saveCharacter}
+                  triggerAlert={triggerAlert}
+               />
+            </div>
+          )}
+
+          {/* TAB: Bank / Vault */}
+          {selectedTab === 'bank' && character && (
+            <div className="w-full flex-1">
+               <BankTab 
+                  character={character} 
+                  language={language}
+                  onUpdateCharacter={saveCharacter}
+                  triggerAlert={triggerAlert}
+               />
+            </div>
+          )}
+
+          {/* TAB LEGACY: Наследие Аккаунта */}
+          {selectedTab === 'legacy' && character && (
+            <div className="animate-fade-in w-full">
+              <LegacyAndIdentity
+                character={character}
+                onUpdateCharacter={saveCharacter}
+                triggerAlert={triggerAlert}
+              />
+            </div>
+          )}
+
+          {/* TAB 5: Character Sheet */}
           {selectedTab === 'character' && (
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
-              <div className="border-b border-slate-800 pb-3">
-                <h3 className="font-serif text-lg font-bold text-white flex items-center gap-1.5">
-                  <User className="h-5 w-5 text-amber-500" />
-                  Inventory Loot Details
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">Manage food, bandages, or click items to equip changes to the Armory.</p>
-              </div>
-
-              {character.inventory.length === 0 ? (
-                <div className="bg-slate-950 border border-slate-800 rounded-lg p-6 text-center text-slate-500 text-xs font-mono">
-                  Your inventory bags are completely empty. Go grind monsters inside active zones for drops!
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {character.inventory.map((item) => (
-                    <div key={item.id} className="bg-slate-950 border border-slate-805 p-3 rounded-lg flex items-center justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-slate-200 truncate">
-                            {item.upgradeLevel ? `+${item.upgradeLevel} ` : ''}{item.name}
-                          </span>
-                          <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded uppercase font-bold shrink-0 ${
-                            item.rarity === 'legendary' ? 'bg-orange-950 text-orange-400' :
-                            item.rarity === 'epic' ? 'bg-purple-950 text-purple-400' : 
-                            item.rarity === 'rare' ? 'bg-blue-950 text-blue-400' : 
-                            item.rarity === 'uncommon' ? 'bg-green-950 text-green-400' :
-                            'bg-slate-900 text-slate-400'
-                          }`}>
-                            {item.rarity}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 leading-tight block truncate mt-0.5">{item.description}</p>
-                        {item.sockets && item.sockets.length > 0 && (
-                          <div className="flex gap-1 mt-1 text-[10px] text-emerald-500 font-mono italic">
-                            Сокеты: {item.sockets.filter(s => s.rune).length}/{item.sockets.length} (заполнено)
-                          </div>
-                        )}
-                        {item.modifiers && item.modifiers.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1 text-[9px]">
-                            {item.modifiers.map((mod, idx) => (
-                              <span key={idx} className="bg-slate-900 text-indigo-400 px-1 py-0.5 border border-indigo-900/30 rounded">{mod}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex flex-wrap gap-1.5 text-[9px] font-mono text-amber-500/80 mt-1">
-                          {item.stats.str && <span>СИЛ +{item.stats.str}</span>}
-                          {item.stats.sta && <span>ВЫН +{item.stats.sta}</span>}
-                          {item.stats.agi && <span>ЛОВ +{item.stats.agi}</span>}
-                          {item.stats.mana && <span>Мана +{item.stats.mana}</span>}
-                          {item.stats.hp && <span>ХП +{item.stats.hp}</span>}
-                          {item.stats.ac && <span>КБ(AC) +{item.stats.ac}</span>}
-                        </div>
-                      </div>
-
-                      <div className="flex gap-1.5 shrink-0 select-none">
-                        {item.slot !== 'none' ? (
-                          <button
-                            onClick={() => handleEquipItem(item)}
-                            className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1 rounded cursor-pointer transition-all"
-                          >
-                            Надеть
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleUseConsumable(item.id, item.name)}
-                            className="text-xs bg-slate-800 hover:bg-slate-705 text-emerald-400 px-3 py-1 rounded cursor-pointer transition-all"
-                          >
-                            Использовать
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => handleSellItem(item.id, item.price, item.name)}
-                          title="Продать торговцу за золотые монеты"
-                          className="text-xs bg-slate-800 hover:bg-slate-700 hover:text-amber-400 text-slate-500 px-2 py-1 rounded cursor-pointer"
-                        >
-                          Продать
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Pillar 2: Cosmetic Salon & Transmogrification Wardrobe block */}
-              <div className="mt-8 border-t border-slate-800/60 pt-6">
-                <CosmeticSalonTransmog
+            <div className="w-full flex-1">
+               <CharacterSheetTab 
                   character={character}
                   onUpdateCharacter={saveCharacter}
                   triggerAlert={triggerAlert}
-                  notifyPlayerImpact={notifyPlayerImpact}
-                />
-              </div>
+                  language={language}
+               />
+               <div className="mt-8">
+                 <CosmeticSalonTransmog
+                   character={character}
+                   onUpdateCharacter={saveCharacter}
+                   triggerAlert={triggerAlert}
+                   notifyPlayerImpact={notifyPlayerImpact}
+                 />
+               </div>
+            </div>
+          )}
+
+          {/* TAB: Mail Tab */}
+          {selectedTab === 'mail' && character && (
+            <div className="w-full flex-1">
+               <MailTab 
+                  character={character} 
+                  language={language}
+               />
+            </div>
+          )}
+
+          {/* TAB: Chat Tab */}
+          {selectedTab === 'chat' && character && (
+            <div className="w-full flex-1 flex flex-col items-center justify-center min-h-[500px]">
+               <ClassicRPChat
+                 chatMessages={chatMessages}
+                 onSendMessage={handleSendChatOOC}
+                 character={character}
+               />
             </div>
           )}
 
@@ -4201,7 +3962,7 @@ export default function App() {
                 {/* Subtab Navigation Buttons */}
                 {guild && (
                   <div className="flex border-t border-slate-800/80 mt-4 pt-1 flex-wrap gap-1">
-                    {(['management', 'pve', 'pvp', 'craft'] as const).map((sub) => (
+                    {(['management', 'pve', 'pvp', 'craft', 'lands'] as const).map((sub) => (
                       <button
                         key={sub}
                         onClick={() => setGuildSubTab(sub)}
@@ -4215,7 +3976,8 @@ export default function App() {
                         {sub === 'pve' && <Sword className="h-3.5 w-3.5" />}
                         {sub === 'pvp' && <Trophy className="h-3.5 w-3.5" />}
                         {sub === 'craft' && <Hammer className="h-3.5 w-3.5" />}
-                        {sub === 'management' ? 'Штаб / Состав' : sub === 'pve' ? 'PvE Рейды' : sub === 'pvp' ? 'PvP Осады' : 'Экономика & Крафт'}
+                        {sub === 'lands' && <MapPin className="h-3.5 w-3.5" />}
+                        {sub === 'management' ? 'Штаб / Состав' : sub === 'pve' ? 'PvE Рейды' : sub === 'pvp' ? 'PvP Осады' : sub === 'craft' ? 'Экономика & Крафт' : 'Земли и Летопись'}
                       </button>
                     ))}
                   </div>
@@ -5540,6 +5302,15 @@ export default function App() {
                     </div>
                   )}
 
+                  {/* 5. LANDS & LEGENDS */}
+                  {guildSubTab === 'lands' && (
+                    <GuildLandsAndLegends
+                      character={character}
+                      guild={guild}
+                      triggerAlert={triggerAlert}
+                    />
+                  )}
+
                 </div>
               )}
 
@@ -5554,155 +5325,7 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 6: Separate Chat Tab */}
-          {selectedTab === 'chat' && (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 animate-fade-in">
-              {/* Chat Viewport (takes 3 of the 4 columns) */}
-              <div className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-lg shadow-sm flex flex-col h-[560px]">
-                {/* Chat Box Header info */}
-                <div className="p-3.5 border-b border-slate-800 bg-slate-900/40 rounded-t-lg flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-500 font-mono flex items-center gap-1.5">
-                      <MessageSquare className="h-4.5 w-4.5 text-amber-500 animate-pulse" />
-                      Гильдейские палаты Этернии
-                    </span>
-                    <span className="text-[10px] text-slate-500 font-mono block">ИИ-соратники реагируют на ваши действия в реальном времени</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[10px] bg-slate-950 font-mono text-emerald-500 border border-emerald-955 px-2.5 py-1 rounded">
-                    <span>ЛОГИ ИГРОВОГО МИРА АКТИВНЫ</span>
-                  </div>
-                </div>
-
-                {/* Chat Messages Frame list */}
-                <div className="flex-1 p-3.5 overflow-y-auto space-y-2 bg-slate-955/80 font-mono text-[11px] leading-relaxed scroll-smooth select-text">
-                  {chatMessages.length === 0 ? (
-                    <div className="h-full flex items-center justify-center text-slate-600 text-xs text-center py-12">
-                      Глобальные сообщения еще не получены. Напишите что-нибудь, чтобы пробудить игровой мир!
-                    </div>
-                  ) : (
-                    chatMessages.map((msg) => (
-                      <div key={msg.id} className="p-1.5 rounded transition-all hover:bg-slate-900/40">
-                        <span className="text-slate-500">[{msg.timestamp}]</span>{' '}
-                        <span className={`font-bold transition-all text-[11px] uppercase ${
-                          msg.channel === 'System'
-                            ? 'text-red-400'
-                            : msg.channel === 'Auction'
-                            ? 'text-emerald-400'
-                            : msg.channel === 'Shout'
-                            ? 'text-amber-400 font-extrabold animate-pulse'
-                            : msg.channel === 'Guild'
-                            ? 'text-purple-400'
-                            : 'text-violet-300'
-                        }`}>
-                          [{msg.channel === 'System' ? 'Система' : msg.channel === 'Auction' ? 'Торговля' : msg.channel === 'Shout' ? 'Крик' : msg.channel === 'Guild' ? 'Гильдия' : msg.channel}]
-                        </span>{' '}
-                        <span className="text-white hover:text-amber-400 cursor-pointer font-extrabold">{msg.sender}:</span>{' '}
-                        <span className={`${
-                          msg.text.includes('[') ? 'text-amber-300 font-bold' : 'text-slate-300'
-                        }`}>
-                          {msg.text}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
-
-                {/* Chat Message Input form */}
-                <form onSubmit={handleSendChat} className="p-3.5 border-t border-slate-800 bg-slate-900/60 rounded-b-lg space-y-3">
-                  {/* Channel buttons selectors */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto text-[10px] font-mono border-b border-slate-800 pb-2.5">
-                    {(['OOC', 'Auction', 'Guild', 'Shout'] as const).map((ch) => (
-                      <button
-                        key={ch}
-                        type="button"
-                        onClick={() => setChatChannel(ch)}
-                        className={`px-2.5 py-1 rounded capitalize cursor-pointer transition-all ${
-                          chatChannel === ch
-                            ? 'bg-amber-600 font-black text-slate-950'
-                            : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        {ch === 'OOC' ? 'Флуд' : ch === 'Auction' ? 'Торг' : ch === 'Guild' ? 'Гильдия' : ch === 'Shout' ? 'Крик' : ch}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Text area and submit row */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      required
-                      disabled={isSendingChat}
-                      placeholder={`Нажмите Enter, чтобы сказать в канал [${chatChannel === 'OOC' ? 'Флуд' : chatChannel === 'Auction' ? 'Торг' : chatChannel === 'Guild' ? 'Гильдия' : chatChannel === 'Shout' ? 'Крик' : chatChannel}]...`}
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      className="flex-1 bg-slate-955 border border-slate-700 rounded px-3 py-2 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isSendingChat || !chatInput.trim()}
-                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4.5 py-1.5 text-xs font-bold rounded flex items-center justify-center cursor-pointer transition-all gap-1 font-mono"
-                    >
-                      {isSendingChat ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <>
-                          <span>ОТПРАВИТЬ</span>
-                          <Send className="h-3.5 w-3.5" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Sidebar: Online Active Bot players & Details (takes 1 column) */}
-              <div className="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-lg p-4 h-[560px] flex flex-col space-y-4">
-                <div className="border-b border-slate-800 pb-2.5">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono flex items-center gap-1.5">
-                    <User className="h-4 w-4 text-emerald-400" />
-                    Соратники в Сети
-                  </span>
-                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">Активные симулируемые спутники в {activeZone.name}</p>
-                </div>
-
-                <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 select-none">
-                  {/* The actual User */}
-                  <div className="bg-slate-950/60 p-2.5 border border-amber-500/20 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <div>
-                        <span className="text-xs font-bold text-amber-400 block tracking-tight">{character.name}</span>
-                        <span className="text-[9px] font-mono text-slate-400">Ур. {character.level} {character.class} (Вы)</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Live Active Zone Bots */}
-                  {mapEntities
-                    .filter((e) => e.type === 'bot')
-                    .map((b) => (
-                      <div key={b.id} className="bg-slate-950/30 hover:bg-slate-950/60 transition-colors p-2.5 border border-slate-800 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <div>
-                            <span className="text-xs font-bold text-slate-200 hover:text-amber-300 cursor-pointer block tracking-tight">{b.name}</span>
-                            <span className="text-[9px] font-mono text-slate-400 font-bold">Ур. {character.level + (Math.random() > 0.5 ? 1 : b.name.length % 2 === 0 ? 0 : -1) || 3} {b.class || 'Рейнджер'}</span>
-                          </div>
-                        </div>
-                        <span className="text-[8px] bg-slate-900 border border-slate-800 font-mono text-slate-400 px-1.5 py-0.2 rounded">БОТ</span>
-                      </div>
-                    ))}
-                </div>
-
-                <div className="bg-slate-950/80 border border-slate-800 p-3 rounded text-[10px] font-mono text-slate-400 leading-relaxed space-y-1">
-                  <span className="text-amber-500 font-bold block">💡 ИНТЕРАКТИВНЫЙ ЧАТ</span>
-                  Контекст зоны адаптируется к вашим активным координатам. Говорите в чате, чтобы призвать ИИ-ботов к ответам или организовать рейд!
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Chat Tab removed since it is now an overlay UI element */}
 
           {selectedTab === 'progression' && character && (
             <div className="space-y-6 animate-fade-in w-full">
@@ -5725,62 +5348,13 @@ export default function App() {
           )}
 
           {selectedTab === 'crafting-market' && character && (
-            <div className="space-y-6 animate-fade-in w-full">
-              <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 w-fit">
-                {(['craft', 'enhance', 'reforge', 'sockets', 'salvage'] as const).map(sub => (
-                  <button
-                    key={sub}
-                    onClick={() => setCraftSubTab(sub)}
-                    className={`px-4 py-2 text-[10px] font-bold uppercase rounded flex items-center gap-2 transition-all ${
-                      craftSubTab === sub 
-                        ? 'bg-amber-600 text-slate-900 shadow-[0_0_10px_rgba(217,119,6,0.5)]' 
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                    }`}
-                  >
-                    {sub === 'craft' ? <><Hammer className="w-4 h-4"/> Создание</> : 
-                     sub === 'enhance' ? <><ArrowUpCircle className="w-4 h-4"/> Улучшение</> :
-                     sub === 'reforge' ? <><Wand2 className="w-4 h-4"/> Перековка</> :
-                     sub === 'sockets' ? <><Hexagon className="w-4 h-4"/> Сокеты</> :
-                     <><Trash2 className="w-4 h-4"/> Разбор</>}
-                  </button>
-                ))}
-              </div>
-
-              {craftSubTab === 'craft' && (
-                <GatheringCraftingEngine
+            <div className="w-full flex-1">
+               <ForgeEthereaTab
                   character={character}
                   onUpdateCharacter={saveCharacter}
                   triggerAlert={triggerAlert}
-                />
-              )}
-              {craftSubTab === 'enhance' && (
-                <EquipmentEnhancement
-                  character={character}
-                  onUpdateCharacter={saveCharacter}
-                  triggerAlert={triggerAlert}
-                />
-              )}
-              {craftSubTab === 'reforge' && (
-                <EquipmentReforge
-                  character={character}
-                  onUpdateCharacter={saveCharacter}
-                  triggerAlert={triggerAlert}
-                />
-              )}
-              {craftSubTab === 'sockets' && (
-                <EquipmentSockets
-                  character={character}
-                  onUpdateCharacter={saveCharacter}
-                  triggerAlert={triggerAlert}
-                />
-              )}
-              {craftSubTab === 'salvage' && (
-                <EquipmentSalvage
-                  character={character}
-                  onUpdateCharacter={saveCharacter}
-                  triggerAlert={triggerAlert}
-                />
-              )}
+                  language={language}
+               />
             </div>
           )}
 

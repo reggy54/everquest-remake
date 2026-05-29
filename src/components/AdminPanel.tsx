@@ -264,6 +264,13 @@ export default function AdminPanel({
                          </button>
                          <button onClick={() => {
                             if (!character) return;
+                            saveCharacter({ ...character, level: 30, specialization: undefined });
+                            triggerAlert(`Установлен 30ур и сброшена специализация`, 'success');
+                         }} className="bg-slate-950 hover:bg-slate-800 border border-indigo-900/50 text-indigo-400 font-mono text-xs py-3 px-2 rounded font-bold uppercase transition flex items-center justify-center gap-2 col-span-2">
+                           <Zap className="w-4 h-4" /> Test Lvl 30 Spec
+                         </button>
+                         <button onClick={() => {
+                            if (!character) return;
                             const wep: Item = { id:`gm-wep-${Date.now()}`, name:'🌌 Астральный Клинок ГМа', slot:'primary', description:'Истребляет мгновенно. Дает полномочия Бога.', price:999999, rarity:'epic', stats:{str:9999, sta:9999, int:9999, wis:9999, agi:9999}};
                             const chest: Item = { id:`gm-chest-${Date.now()}`, name:'🛡️ Эгида Бессмертия ГМа', slot:'chest', description:'Полная неуязвимость.', price:999999, rarity:'epic', stats:{str:9999, sta:9999, int:9999, wis:9999, agi:9999}};
                             saveCharacter({ ...character, inventory: [...character.inventory, wep, chest] });

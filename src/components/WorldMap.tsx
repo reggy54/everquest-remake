@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Zone } from '../types';
 import { GAME_ZONES } from '../data/gameData';
-import { MapPin, ArrowRight, Compass, Navigation, Wind, Sparkles, Layers, Waypoints } from 'lucide-react';
+import { MapPin, Search, Compass, Navigation, Waypoints, Sparkles, Layers, Anchor, Bookmark, ScanEye, Flag } from 'lucide-react';
 
 interface WorldMapProps {
   currentZoneId: string;
@@ -9,294 +9,290 @@ interface WorldMapProps {
   language?: 'ru' | 'en';
 }
 
-type MapLayer = 'ground' | 'air' | 'magic';
+const ZONES_COORDS: Record<string, { x: number, y: number, color: string, name: string }> = {
+  'starter-hills': { x: 30, y: 75, color: 'bg-emerald-900/60', name: 'Серебряные Луга' }, // светло-зелёный
+  'broken-stars-valley': { x: 45, y: 55, color: 'bg-indigo-900/60', name: 'Долина Звезд' }, // фиолетово-голубой
+  'whispering-jungles': { x: 20, y: 40, color: 'bg-green-900/60', name: 'Джунгли' },
+  'central-rift': { x: 50, y: 45, color: 'bg-purple-900/60', name: 'Центральный Разлом' },
+  'mountain-ridge': { x: 70, y: 40, color: 'bg-slate-800/60', name: 'Горный Хребет' }, // серо-голубой
+  'burning-wastes': { x: 80, y: 70, color: 'bg-rose-900/60', name: 'Пылающие Пустоши' }, // оранжево-красный
+  'sky-archipelago': { x: 50, y: 20, color: 'bg-sky-900/60', name: 'Парящие Острова' },
+  'abyss-underworld': { x: 50, y: 85, color: 'bg-orange-950/60', name: 'Глубины' },
+  'broken-horizon': { x: 85, y: 25, color: 'bg-indigo-950/60', name: 'Расколотый Горизонт' },
+};
+
+// SVG paths for regions approximations
+const MAP_REGIONS = [
+  "M 25 70 Q 30 65 35 70 T 40 85 Q 30 90 20 85 Z",
+  "M 35 50 Q 45 45 55 55 T 45 65 Q 35 60 30 55 Z",
+  "M 60 35 Q 70 30 80 40 T 75 55 Q 65 50 60 35 Z",
+  "M 10 35 Q 20 30 30 40 T 25 55 Q 15 50 10 35 Z",
+  "M 70 65 Q 85 60 95 75 T 80 90 Q 70 85 65 75 Z",
+  "M 45 40 Q 55 35 60 45 T 50 55 C 45 50 40 50 45 40 Z",
+];
+
+type Layer = 'base' | 'height' | 'active' | 'rift';
+type Filter = 'quests' | 'resources' | 'teleports' | 'events' | 'guilds' | 'bosses';
+
+import PixelWindow from './PixelWindow';
 
 export default function WorldMap({ currentZoneId, onTravel, language = 'ru' }: WorldMapProps) {
-  const [activeLayer, setActiveLayer] = useState<'ground' | 'air' | 'magic' | 'underground' | 'event'>('ground');
-  const [showWaypointPath, setShowWaypointPath] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'isometric'>('grid');
-  const [zoom, setZoom] = useState(100);
+  const [activeLayer, setActiveLayer] = useState<Layer>('base');
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  
+  const [search, setSearch] = useState('');
+  const [explorerMode, setExplorerMode] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<Filter[]>(['teleports', 'events']);
+  const [waypoint, setWaypoint] = useState<{x: number, y: number} | null>(null);
 
-  const handleTravelClick = (zoneId: string) => {
-     setShowWaypointPath(zoneId);
-     setTimeout(() => {
-        onTravel(zoneId);
-        setShowWaypointPath(null);
-     }, 800); // 3D path cinematic delay
+  const mapRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const zoomFactor = -e.deltaY * 0.001;
+    setZoom(z => Math.min(Math.max(0.5, z + zoomFactor), 4));
+  };
+
+  const toggleFilter = (f: Filter) => {
+    setActiveFilters(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]);
+  };
+
+  const handleMapClick = (e: React.MouseEvent) => {
+    if (isDragging) return;
+    if (mapRef.current) {
+      const rect = mapRef.current.getBoundingClientRect();
+      const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+      const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+      setWaypoint({ x: xPercent, y: yPercent });
+    }
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in h-full relative overflow-hidden flex flex-col">
-      <div className="border-b border-slate-800 pb-4 sticky top-0 bg-slate-900/90 backdrop-blur z-20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-           <h3 className="font-serif text-2xl font-bold text-white flex items-center gap-2 uppercase tracking-[0.2em] shadow-black drop-shadow-md">
-             <Compass className="h-6 w-6 text-amber-500 animate-[spin_10s_linear_infinite]" />
-             {language === 'ru' ? 'Этерия: Картография' : 'Etherea: Cartography'}
-           </h3>
-           <p className="text-xs text-slate-400 mt-1 font-mono">
-             {language === 'ru' ? 'Разрешение: 25x25км • Живой Горизонт • ' : 'Scale: 25x25km • Living Horizon • '}
-             <span className="text-emerald-400">Навигация Активна</span>
-           </p>
-        </div>
-
-        {/* Map Controls */}
-        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
-          <div className="flex bg-slate-950 border border-slate-800 rounded-lg p-1 shadow-inner">
-             <button 
-               onClick={() => setActiveLayer('ground')}
-               className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 rounded transition-all ${
-                  activeLayer === 'ground' ? 'bg-amber-600/20 text-amber-500 border border-amber-500/50' : 'text-slate-500 hover:text-slate-300'
-               }`}
-             >
-                <Navigation className="h-3 w-3" />
-                {language === 'ru' ? 'Наземный' : 'Ground'}
-             </button>
-             <button 
-               onClick={() => setActiveLayer('air')}
-               className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 rounded transition-all hidden sm:flex ${
-                  activeLayer === 'air' ? 'bg-sky-600/20 text-sky-400 border border-sky-400/50' : 'text-slate-500 hover:text-slate-300'
-               }`}
-             >
-                <Wind className="h-3 w-3" />
-                {language === 'ru' ? 'Скай' : 'Sky'}
-             </button>
-             <button 
-               onClick={() => setActiveLayer('underground')}
-               className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 rounded transition-all hidden sm:flex ${
-                  activeLayer === 'underground' ? 'bg-orange-900/40 text-orange-400 border border-orange-400/50' : 'text-slate-500 hover:text-slate-300'
-               }`}
-             >
-                <Layers className="h-3 w-3" />
-                {language === 'ru' ? 'Глубины' : 'Depths'}
-             </button>
-             <button 
-               onClick={() => setActiveLayer('magic')}
-               className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 rounded transition-all ${
-                  activeLayer === 'magic' ? 'bg-purple-600/20 text-purple-400 border border-purple-400/50' : 'text-slate-500 hover:text-slate-300'
-               }`}
-             >
-                <Sparkles className="h-3 w-3" />
-                {language === 'ru' ? 'Лей-линии' : 'Ley Lines'}
-             </button>
-          </div>
-          
-          <div className="flex bg-slate-950 border border-slate-800 rounded-lg p-1 shadow-inner h-[34px]">
-             <button 
-               onClick={() => setViewMode(viewMode === 'grid' ? 'isometric' : 'grid')}
-               className="px-3 py-1 text-[10px] font-mono tracking-widest uppercase flex items-center gap-1 text-sky-400 border border-sky-500/30 rounded hover:bg-sky-900/30 transition-all font-bold"
-             >
-                3D MAP MODE: {viewMode === 'isometric' ? 'ON' : 'OFF'}
-             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Global Compass Placeholder */}
-      <div className="w-full h-8 bg-slate-950 border border-slate-800 rounded-full relative overflow-hidden flex items-center justify-center shrink-0">
-         <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent top-1/2"></div>
-         <div className="flex gap-16 text-[10px] font-mono text-amber-500/70 uppercase font-black tracking-widest px-4 absolute w-[200%] animate-[slide_20s_linear_infinite]">
-            <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SW</span><span>W</span><span>NW</span>
-            <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SW</span><span>W</span><span>NW</span>
-         </div>
-         <div className="w-0.5 h-6 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,1)] z-10"></div>
-      </div>
-
-      <div className="flex-1 overflow-auto custom-scrollbar pr-2 mt-2 -mr-2 relative"
-           onWheel={(e) => {
-              if (e.ctrlKey || e.metaKey) {
-                 e.preventDefault();
-                 setZoom(prev => Math.min(Math.max(prev - e.deltaY * 0.1, 50), 200));
-              }
-           }}>
-        <div 
-           className={`transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] origin-center min-h-full flex items-center justify-center p-8`}
-           style={{ transform: `scale(${zoom / 100}) ${viewMode === 'isometric' ? 'rotateX(55deg) rotateZ(-45deg)' : ''}`, transformStyle: 'preserve-3d' }}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-12 w-full max-w-7xl mx-auto">
-            {GAME_ZONES.map(zone => (
-            <div 
-              key={zone.id} 
-              className={`relative rounded-xl overflow-hidden border-2 transition-all p-4 min-h-[260px] flex flex-col justify-between group cursor-default ${
-                 currentZoneId === zone.id 
-                    ? 'border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.2)]' 
-                    : 'border-slate-800 hover:border-slate-600 shadow-lg'
-              }`}
-            >
-              {/* Background Image with Layer Modifiers */}
-              <div 
-                className={`absolute inset-0 bg-cover bg-center transition-all duration-[10s] group-hover:scale-110 ${
-                  activeLayer === 'magic' ? 'mix-blend-color-dodge brightness-150 saturate-200 hue-rotate-30' : 
-                  activeLayer === 'air' ? 'brightness-125 saturate-50 hue-rotate-15' : ''
-                }`}
-                style={{ backgroundImage: `url('${zone.imageUrl}')` }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/90 to-slate-900/30" />
-              
-              {/* Magic Layer Leylines */}
-              {activeLayer === 'magic' && (
-                 <div className="absolute inset-0 opacity-40 pointer-events-none mix-blend-screen">
-                    <div className="w-full h-[2px] bg-purple-500 absolute top-1/3 left-0 -rotate-12 shadow-[0_0_15px_#a855f7]" />
-                    <div className="w-full h-[1px] bg-sky-500 absolute top-1/2 left-0 rotate-45 shadow-[0_0_10px_#0ea5e9]" />
-                 </div>
-              )}
-
-              {/* Navigation Mini-map Grid & Active Marker */}
-              {currentZoneId === zone.id && (() => {
-                const hash = zone.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                const topPos = 30 + (hash % 40);
-                const leftPos = 20 + ((hash * 7) % 60);
-                
-                return (
-                <div className="absolute inset-0 z-0 pointer-events-none">
-                   <div className="w-full h-full bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:30px_30px] opacity-70" />
-                   
-                   {/* Echo Path Trace Line simulated via dashed border */}
-                   <div className="absolute w-[1px] h-full bg-dashed border-l border-dashed border-emerald-500/30 left-10" />
-
-                   {/* Active Player Marker */}
-                   <div 
-                     className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-1000 ease-out"
-                     style={{ top: `${topPos}%`, left: `${leftPos}%` }}
-                   >
-                      <div className="w-12 h-12 rounded-full border border-emerald-500/50 absolute animate-ping" />
-                      <div className="w-3 h-3 rounded-full border-2 border-slate-900 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.9)] relative z-10 flex items-center justify-center">
-                         <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                      </div>
-                      <div className="absolute w-[400%] h-[1px] bg-emerald-500/30" />
-                      <div className="absolute h-[400%] w-[1px] bg-emerald-500/30" />
-                      
-                      <div className="absolute top-5 left-5 bg-slate-950/80 backdrop-blur-sm border border-emerald-900/50 text-emerald-400 font-mono text-[9px] px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
-                         Z:{topPos * 10} ALT:{activeLayer === 'air' ? '1500m' : '0m'}
-                      </div>
-                   </div>
-                </div>
-              );})()}
-
-              {/* Waypoint Golden Line Animating */}
-              {showWaypointPath === zone.id && (
-                 <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center overflow-hidden">
-                    <div className="w-[150%] h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent absolute rotate-45 shadow-[0_0_20px_#fbbf24] animate-[ping_0.8s_ease-out_forwards]" />
-                 </div>
-              )}
-
-              <div className="relative z-10 space-y-1 flex-1">
-                 <div className="flex justify-between items-start">
-                    <div>
-                      {currentZoneId === zone.id && (
-                        <div className="inline-flex bg-emerald-500 text-slate-950 text-[9px] font-bold px-1.5 py-0.5 uppercase rounded tracking-widest shadow-lg items-center gap-1 mb-2 animate-pulse">
-                          <MapPin className="h-3 w-3" />
-                          {language === 'ru' ? 'ВЫ ЗДЕСЬ' : 'YOU ARE HERE'}
-                        </div>
-                      )}
-                      
-                      <h4 className="font-serif text-xl font-bold text-amber-500 leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                        {zone.name}
-                      </h4>
-                    </div>
-                    {/* Fast Travel Icons based on layer/zone */}
-                    <div className="flex flex-col gap-1 items-end pt-1">
-                       {(zone.minLevel < 30 || activeLayer === 'ground') && (
-                         <div className="bg-slate-950/80 border border-emerald-900/50 rounded px-1.5 py-0.5 flex items-center gap-1 backdrop-blur" title="Путевой Камень">
-                           <Waypoints className="w-3 h-3 text-emerald-400" />
-                           <span className="text-[8px] font-mono text-emerald-400">Waystone</span>
-                         </div>
-                       )}
-                       {(zone.minLevel >= 50 || activeLayer === 'air') && (
-                         <div className="bg-slate-950/80 border border-sky-900/50 rounded px-1.5 py-0.5 flex items-center gap-1 backdrop-blur" title="Небесные Врата">
-                           <Layers className="w-3 h-3 text-sky-400" />
-                           <span className="text-[8px] font-mono text-sky-400">Sky Gate</span>
-                         </div>
-                       )}
-                    </div>
-                 </div>
-
-                 <div className="pt-1 flex flw-wrap gap-2">
-                    <span className="text-[10px] uppercase font-mono text-slate-300 font-bold bg-slate-950/60 px-2 py-0.5 rounded border border-slate-700/50 backdrop-blur-md">
-                      {language === 'ru' ? 'Рек. Ур.' : 'Rec. Lvl'} {zone.minLevel}+
-                    </span>
-                    {zone.difficulty === 'Raid' && (
-                       <span className="text-[10px] uppercase font-mono text-red-400 font-bold bg-slate-950/60 px-2 py-0.5 rounded border border-red-900/50 backdrop-blur-md animate-pulse">
-                         {language === 'ru' ? 'Рейд' : 'Raid'}
-                       </span>
-                    )}
-                 </div>
-
-                <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mt-2 drop-shadow-md pb-2 pt-1">
-                  {zone.description}
-                </p>
-
-                {/* Events & POIs container */}
-                <div className="mt-2 space-y-2 relative pb-2 backdrop-blur-sm bg-slate-900/40 border border-slate-700/30 p-2 rounded max-h-[80px] overflow-hidden group-hover:max-h-[300px] transition-all duration-300 custom-scrollbar overflow-y-auto">
-                    {zone.events && zone.events.length > 0 && (
-                        <div>
-                             <div className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-widest text-orange-400 mb-1">
-                                <Sparkles className="w-3 h-3" />
-                                {language === 'ru' ? 'События в зоне:' : 'Zone Events:'}
-                             </div>
-                             <div className="space-y-1.5">
-                                 {zone.events.map((ev, i) => (
-                                     <div key={i} className="text-[10px] leading-tight border-l-2 border-orange-500/50 pl-2 ml-1">
-                                         <strong className="text-slate-200">{ev.name}</strong> <span className="text-slate-500">({ev.frequency})</span>
-                                         <p className="text-slate-400">{ev.description}</p>
-                                         <span className="text-amber-500/70 text-[9px]">Награда: {ev.reward}</span>
-                                     </div>
-                                 ))}
-                             </div>
-                        </div>
-                    )}
-                    
-                    {zone.pointsOfInterest && zone.pointsOfInterest.length > 0 && (
-                        <div className="pt-1">
-                             <div className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-widest text-sky-400 mb-1">
-                                <MapPin className="w-3 h-3" />
-                                {language === 'ru' ? 'Ключевые локации:' : 'Key Locations:'}
-                             </div>
-                             <div className="flex flex-wrap gap-1">
-                                 {zone.pointsOfInterest.map((poi, i) => (
-                                     <span key={i} className="text-[9px] bg-slate-800/80 text-slate-300 px-1 border border-slate-700/50 rounded whitespace-nowrap">
-                                        {poi}
-                                     </span>
-                                 ))}
-                             </div>
-                        </div>
-                    )}
-                </div>
-              </div>
-              
-              <div className="relative z-10 w-full mt-auto">
-                {currentZoneId !== zone.id ? (
-                  <button
-                    onClick={() => handleTravelClick(zone.id)}
-                    disabled={showWaypointPath !== null}
-                    className="w-full bg-slate-800/80 hover:bg-amber-600/90 text-slate-300 hover:text-slate-950 text-xs font-bold py-2.5 px-3 rounded border border-slate-600 hover:border-amber-400 flex items-center justify-center gap-2 uppercase tracking-[0.15em] backdrop-blur-sm transition-all shadow-[0_4px_10px_rgba(0,0,0,0.5)] group/btn"
-                  >
-                    <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
-                    {language === 'ru' ? 'Выстроить Путь' : 'Calculate Path'}
-                  </button>
-                ) : (
-                  <div className="w-full bg-emerald-950/40 text-emerald-500/50 text-[10px] font-mono py-2 text-center uppercase tracking-widest border border-emerald-900/30 rounded backdrop-blur">
-                     {language === 'ru' ? 'Текущая Позиция' : 'Current Position'}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          </div>
-        </div>
-      </div>
+    <PixelWindow title={language === 'ru' ? 'Карта Мира - Этерия' : 'World Map - Eteria'}>
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden font-mono bg-[#111111] border-[4px] border-[#222]">
       
-      {/* Travel Interstitial Overlay (Golden Path Cinematic) */}
-      {showWaypointPath && (
-         <div className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in">
-            <Compass className="w-16 h-16 text-amber-500 animate-[spin_2s_ease-in-out_infinite] drop-shadow-[0_0_20px_rgba(245,158,11,0.8)]" />
-            <div className="text-amber-500 font-serif text-2xl font-bold mt-4 tracking-widest uppercase shadow-black drop-shadow-lg">
-               {language === 'ru' ? 'Построение Золотого Пути...' : 'Plotting Golden Path...'}
+      {/* 2D Map Container (Left) */}
+      <div 
+        className="flex-1 relative cursor-grab active:cursor-grabbing overflow-hidden bg-[#1e2330] isolate min-h-[300px] lg:min-h-0"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
+      >
+        {/* Soft paper/parchment texture overlay */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }} />
+        
+        {/* Transforming Map Board */}
+        <div 
+          ref={mapRef}
+          className="w-[2000px] h-[2000px] absolute transition-transform duration-75 origin-center"
+          style={{ 
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            top: '50%', left: '50%', marginTop: '-1000px', marginLeft: '-1000px'
+          }}
+          onClick={handleMapClick}
+        >
+          {/* Base Continents/Biomes */}
+          {MAP_REGIONS.map((path, idx) => (
+             <svg key={idx} className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-2xl opacity-60">
+                <path d={path.replace(/(\d+)/g, (m) => String(Number(m) * 20))} fill="none" strokeWidth="2" stroke="rgba(255,255,255,0.1)" className="fill-slate-800/20" />
+             </svg>
+          ))}
+
+          {/* Zones */}
+          {GAME_ZONES.map(zone => {
+             const coords = ZONES_COORDS[zone.id];
+             if (!coords) return null;
+             const isCurrent = currentZoneId === zone.id;
+             const isRiftActive = activeLayer === 'rift' && zone.id.includes('rift');
+             const isAirActive = activeLayer === 'height' && zone.id.includes('sky');
+             
+             return (
+               <div 
+                 key={zone.id} 
+                 className="absolute -translate-x-1/2 -translate-y-1/2 group z-20"
+                 style={{ top: `${coords.y}%`, left: `${coords.x}%` }}
+                 onDoubleClick={() => onTravel(zone.id)}
+               >
+                 {/* Biome Glow */}
+                 <div className={`absolute inset-0 blur-3xl rounded-full ${coords.color} opacity-40 group-hover:opacity-60 transition-opacity w-[300px] h-[300px] -translate-x-1/2 -translate-y-1/2`} />
+                 
+                 {/* Node */}
+                 <div className="relative flex flex-col items-center">
+                    <div className={`w-4 h-4 rounded-full border-2 cursor-pointer transition-all ${isCurrent ? 'bg-amber-400 border-white shadow-[0_0_15px_#fbbf24] scale-125' : 'bg-slate-800/80 border-slate-600 hover:border-amber-400'} ${isRiftActive ? 'shadow-[0_0_20px_#a855f7] border-purple-500' : ''}`} />
+                    
+                    {!explorerMode && (
+                      <span className={`text-[11px] font-bold tracking-widest uppercase mt-2 whitespace-nowrap transition-colors rounded px-1.5 py-0.5 bg-slate-900/50 backdrop-blur-sm border ${isCurrent ? 'text-amber-400 border-amber-900/50' : 'text-slate-400 border-transparent group-hover:text-amber-200'}`}>
+                         {coords.name}
+                      </span>
+                    )}
+
+                    {/* Active indicators (Filters) */}
+                    {activeLayer === 'active' && !explorerMode && (
+                       <div className="absolute top-0 right-0 translate-x-2 -translate-y-2 flex gap-1">
+                          {activeFilters.includes('events') && zone.events?.length ? <Sparkles className="w-3 h-3 text-orange-400 drop-shadow-md" /> : null}
+                          {activeFilters.includes('teleports') ? <Waypoints className="w-3 h-3 text-sky-400 drop-shadow-md" /> : null}
+                       </div>
+                    )}
+                 </div>
+               </div>
+             );
+          })}
+
+          {/* Lines connecting zones if needed */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+             {GAME_ZONES.map(zone => {
+                 return zone.connections?.map(targetId => {
+                    const from = ZONES_COORDS[zone.id];
+                    const to = ZONES_COORDS[targetId];
+                    if (!from || !to) return null;
+                    return <line key={`${zone.id}-${targetId}`} x1={`${from.x}%`} y1={`${from.y}%`} x2={`${to.x}%`} y2={`${to.y}%`} stroke="rgba(255,255,255,0.08)" strokeWidth="1.5" strokeDasharray="4 4" />
+                 });
+             })}
+          </svg>
+
+          {/* Waypoint visual */}
+          {waypoint && (
+             <div className="absolute -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none flex flex-col items-center" style={{ top: `${waypoint.y}%`, left: `${waypoint.x}%` }}>
+                <MapPin className="w-6 h-6 text-amber-400 drop-shadow-[0_0_10px_#fbbf24] animate-bounce" />
+                <div className="w-8 h-2 bg-black/40 blur-sm rounded-full mt-1" />
+             </div>
+          )}
+        </div>
+
+        {/* HUD Elements */}
+        {/* Search */}
+        <div className="absolute top-4 left-4 z-40 bg-slate-900/80 backdrop-blur-md rounded-lg border border-slate-700/50 p-2 flex items-center shadow-lg">
+           <Search className="w-4 h-4 text-slate-400 mr-2" />
+           <input 
+             type="text" 
+             placeholder={language === 'ru' ? "Поиск локации..." : "Search location..."}
+             className="bg-transparent border-none text-xs font-mono text-white outline-none w-48 placeholder:text-slate-500"
+             value={search}
+             onChange={e => setSearch(e.target.value)}
+           />
+        </div>
+        
+        {/* Current position */}
+        <div className="absolute bottom-4 left-4 z-40 bg-slate-900/80 backdrop-blur-md rounded-lg border border-slate-700/50 p-2.5 shadow-lg flex items-center gap-3">
+           <div className="bg-amber-900/40 border border-amber-700/50 rounded flex items-center justify-center p-1.5">
+             <MapPin className="w-4 h-4 text-amber-500" />
+           </div>
+           <div>
+             <div className="text-[10px] text-slate-400 font-mono uppercase tracking-widest">{language === 'ru' ? 'Текущая позиция' : 'Current position'}</div>
+             <div className="text-sm font-bold text-slate-100">{GAME_ZONES.find(z => z.id === currentZoneId)?.name}</div>
+           </div>
+        </div>
+      </div>
+
+      {/* Right Column: Filters and Tools (Pixel Art Styled) */}
+      <div className="w-full lg:w-64 bg-[#111111] border-t-[4px] lg:border-t-0 lg:border-l-[4px] border-[#333333] flex shrink-0 lg:flex-col z-40 overflow-x-auto lg:overflow-hidden" style={{ boxShadow: 'inset 4px 0 0 rgba(255,255,255,0.05)' }}>
+         <div className="p-3 lg:p-4 border-r-[4px] lg:border-r-0 lg:border-b-[4px] border-[#333333] shrink-0" style={{ boxShadow: 'inset 0 -4px 0 rgba(0,0,0,0.5)' }}>
+           <h3 className="text-[#ffd700] uppercase tracking-[0.2em] font-bold text-[11px] lg:text-base" style={{ textShadow: '2px 2px 0 #000' }}>
+             {language === 'ru' ? 'Карта Мира' : 'World Map'}
+           </h3>
+           <p className="hidden lg:block text-[10px] text-[#888] mt-2 uppercase tracking-widest">
+             Версия 2.1 (2D)
+           </p>
+         </div>
+
+         {/* Layers */}
+         <div className="p-3 lg:p-4 border-r-[4px] lg:border-r-0 lg:border-b-[4px] border-[#333333] shrink-0 flex flex-col justify-center" style={{ boxShadow: 'inset 0 -4px 0 rgba(0,0,0,0.5)' }}>
+           <div className="hidden lg:block text-[10px] font-bold uppercase tracking-widest text-[#aaa] mb-3" style={{ textShadow: '1px 1px 0 #000' }}>Слои отображения</div>
+           <div className="grid grid-cols-2 lg:grid-cols-2 gap-1 lg:gap-2 w-[160px] lg:w-auto">
+              <button 
+                onClick={() => setActiveLayer('base')} 
+                className={`p-1.5 lg:p-2 text-[8px] lg:text-[9px] font-bold uppercase tracking-wider transition-all ${activeLayer === 'base' ? 'bg-[#444] text-[#fff] border-[2px] border-[#666]' : 'bg-[#222] text-[#888] border-[2px] border-[#111] hover:bg-[#333]'}`}
+                style={{ boxShadow: activeLayer === 'base' ? 'inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5)' : 'inset -2px -2px 0 rgba(0,0,0,0.5)' }}
+              >Базовый</button>
+              <button 
+                onClick={() => setActiveLayer('height')} 
+                className={`p-1.5 lg:p-2 text-[8px] lg:text-[9px] font-bold uppercase tracking-wider transition-all ${activeLayer === 'height' ? 'bg-[#004466] text-[#00ccff] border-[2px] border-[#0088cc]' : 'bg-[#222] text-[#888] border-[2px] border-[#111] hover:bg-[#333]'}`}
+                style={{ boxShadow: activeLayer === 'height' ? 'inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5)' : 'inset -2px -2px 0 rgba(0,0,0,0.5)' }}
+              >Высоты</button>
+              <button 
+                onClick={() => setActiveLayer('active')} 
+                className={`p-1.5 lg:p-2 text-[8px] lg:text-[9px] font-bold uppercase tracking-wider transition-all ${activeLayer === 'active' ? 'bg-[#004422] text-[#00ff88] border-[2px] border-[#008844]' : 'bg-[#222] text-[#888] border-[2px] border-[#111] hover:bg-[#333]'}`}
+                style={{ boxShadow: activeLayer === 'active' ? 'inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5)' : 'inset -2px -2px 0 rgba(0,0,0,0.5)' }}
+              >Активный</button>
+              <button 
+                onClick={() => setActiveLayer('rift')} 
+                className={`p-1.5 lg:p-2 text-[8px] lg:text-[9px] font-bold uppercase tracking-wider transition-all ${activeLayer === 'rift' ? 'bg-[#330044] text-[#aa00ff] border-[2px] border-[#660088]' : 'bg-[#222] text-[#888] border-[2px] border-[#111] hover:bg-[#333]'}`}
+                style={{ boxShadow: activeLayer === 'rift' ? 'inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5)' : 'inset -2px -2px 0 rgba(0,0,0,0.5)' }}
+              >Разлом</button>
+           </div>
+         </div>
+
+         {/* Filters */}
+         <div className="p-3 lg:p-4 lg:border-b-[4px] border-[#333333] shrink-0 w-[240px] lg:w-auto lg:shrink lg:flex-1">
+            <div className="flex justify-between items-center mb-4">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-[#aaa]" style={{ textShadow: '1px 1px 0 #000' }}>Объекты</div>
+              <button 
+                onClick={() => setExplorerMode(!explorerMode)}
+                className={`text-[9px] px-2 py-1 uppercase font-bold transition-colors border-[2px] ${explorerMode ? 'bg-[#4a2e00] text-[#ffaa00] border-[#8a5a00] shadow-[inset_2px_2px_0_rgba(255,255,255,0.2),inset_-2px_-2px_0_rgba(0,0,0,0.5)]' : 'bg-[#222] text-[#888] border-[#111] shadow-[inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-[#333]'}`}
+              >
+                ЛОР
+              </button>
             </div>
-            <div className="text-slate-400 font-mono text-xs mt-2 uppercase tracking-wider">
-               {language === 'ru' ? 'Синхронизация с Путевыми Камнями' : 'Synchronizing Waystones'}
+            
+            <div className={`space-y-2 transition-opacity ${explorerMode ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+               {[
+                 { id: 'teleports' as Filter, icon: Anchor, label: 'Врата', color: '#00ccff' },
+                 { id: 'events' as Filter, icon: Sparkles, label: 'Ивенты', color: '#ffaa00' },
+                 { id: 'quests' as Filter, icon: Bookmark, label: 'Квесты', color: '#ffff00' },
+                 { id: 'resources' as Filter, icon: Layers, label: 'Лут', color: '#00ff00' },
+                 { id: 'guilds' as Filter, icon: Flag, label: 'Клановые', color: '#cc00ff' },
+                 { id: 'bosses' as Filter, icon: ScanEye, label: 'Варбоссы', color: '#ff3333' },
+               ].map(f => (
+                  <button 
+                    key={f.id}
+                    onClick={() => toggleFilter(f.id)}
+                    className="flex justify-between items-center w-full px-2 py-2 bg-[#222] border-[2px] border-[#111] hover:bg-[#333] transition-colors"
+                    style={{ boxShadow: 'inset -2px -2px 0 rgba(0,0,0,0.5)' }}
+                  >
+                     <div className="flex items-center gap-3">
+                       <f.icon className="w-4 h-4" style={{ color: f.color, filter: 'drop-shadow(1px 1px 0 #000)' }} />
+                       <span className="text-[10px] text-[#ccc] font-bold uppercase tracking-widest" style={{ textShadow: '1px 1px 0 #000' }}>{f.label}</span>
+                     </div>
+                     <div className={`w-3 h-3 flex items-center justify-center border-[2px] transition-colors ${activeFilters.includes(f.id) ? 'bg-[#00ff88] border-[#004422]' : 'bg-[#111] border-[#000]'}`}>
+                        {activeFilters.includes(f.id) && <div className="w-1 h-1 bg-white" />}
+                     </div>
+                  </button>
+               ))}
             </div>
          </div>
-      )}
-    </div>
+         
+         <div className="p-3 lg:p-4 border-l-[4px] lg:border-l-0 shrink-0 flex items-center justify-center bg-[#111111] border-[#333333]" style={{ boxShadow: 'inset 4px 0 0 rgba(0,0,0,0.5)' }}>
+           <button 
+             onClick={() => { setZoom(1); setPan({x: 0, y: 0}); }}
+             className="px-6 lg:w-full py-3 h-[40px] lg:h-auto bg-[#444] text-[#eee] hover:bg-[#555] active:bg-[#333] border-[2px] border-[#666] transition-colors text-[10px] font-bold tracking-widest uppercase flex justify-center items-center gap-2"
+             style={{ boxShadow: 'inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5)' }}
+           >
+             <Navigation className="w-3 h-3" />
+             Сброс
+           </button>
+         </div>
+      </div>
+      </div>
+    </PixelWindow>
   );
 }

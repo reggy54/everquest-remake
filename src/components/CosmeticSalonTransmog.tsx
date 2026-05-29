@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PlayerCharacter, SlotType, TransmogPreset } from '../types';
 import { Shield, Sparkles, User, RefreshCw, Layers, EyeOff, Eye, Wind, Flame, Star, Zap } from 'lucide-react';
-import Character3DModel from './Character3DModel';
+import Character2DModel from './Character2DModel';
 
 interface CosmeticSalonTransmogProps {
   character: PlayerCharacter;
@@ -215,7 +215,7 @@ export default function CosmeticSalonTransmog({ character, onUpdateCharacter, tr
                </div>
              )}
              
-            <Character3DModel 
+            <Character2DModel 
                charClass={character.class} 
                race={activeSkin.split(' ')[0] || character.race} 
                equipment={{ ...character.equipment, ...selectedTransmogs, head: hideHelmet ? undefined : (selectedTransmogs.head || character.equipment.head) }} 
