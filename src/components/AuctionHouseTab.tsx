@@ -196,11 +196,11 @@ export default function AuctionHouseTab({ character, language, onUpdateCharacter
              
              <div className="flex flex-col items-center">
                 <span className="text-[#1eff00] font-bold text-xs uppercase bg-black/60 px-2 rounded-t drop-shadow-[1px_1px_0_#000]">Зигги Медноглот</span>
-                <div className="w-24 h-24 bg-[url('https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=GoblinMoney&backgroundColor=111')] bg-cover border-[3px] border-[#554a3a] rounded-b shadow-[0_0_20px_rgba(0,0,0,1)]"></div>
+                <div className="w-24 h-24 bg-[url('https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=GoblinMoney&backgroundColor=111&skinColor=8bc34a')] bg-cover border-[3px] border-[#554a3a] rounded-b shadow-[0_0_20px_rgba(0,0,0,1)]"></div>
              </div>
           </div>
           <div className="lg:hidden absolute top-[44px] right-2 z-40 flex items-center gap-2 pointer-events-none">
-                <div className="w-10 h-10 bg-[url('https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=GoblinMoney&backgroundColor=111')] bg-cover border-[2px] border-[#554a3a] rounded-full shadow-[0_0_10px_rgba(0,0,0,1)]"></div>
+                <div className="w-10 h-10 bg-[url('https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=GoblinMoney&backgroundColor=111&skinColor=8bc34a')] bg-cover border-[2px] border-[#554a3a] rounded-full shadow-[0_0_10px_rgba(0,0,0,1)]"></div>
           </div>
 
           {/* ================= 1. LEFT PANEL: NAVIGATION ================= */}

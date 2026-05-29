@@ -329,7 +329,12 @@ Format return JSON:
         }
       }
     } catch (err: any) {
-      console.warn('Failure inside Gemini automatic chat retort: API Error or Rate Limit');
+      if (err?.status === 429 || (err?.message && err.message.includes('429'))) {
+         console.warn('Gemini API Quota Exceeded (429) in chat retort. Switching to fallback.');
+         ai = null;
+      } else {
+         console.warn('Failure inside Gemini automatic chat retort: API Error');
+      }
     }
   } else if (!ai && (channel === 'OOC' || channel === 'Shout' || channel === 'Guild')) {
     // Basic mock replies if Gemini API is not working or not configured
@@ -404,7 +409,12 @@ Format return JSON:
 
     res.json(parsed);
   } catch (err: any) {
-    console.warn('Error generating world event: ', err);
+    if (err?.status === 429 || (err?.message && err.message.includes('429'))) {
+       console.warn('Gemini API Quota Exceeded (429). Disabling AI integration and switching to fallback mock mode.');
+       ai = null;
+    } else {
+       console.warn('Error generating world event: API Error');
+    }
     const fallback = {
       title: 'Внезапное затишье',
       description: 'Магические потоки мира стабилизировались. Временно ничего не происходит.',
@@ -456,7 +466,12 @@ app.post('/api/gemini/player-impact', async (req, res) => {
 
     res.json({ success: true, text: reactionText });
   } catch (err: any) {
-    console.warn('Error in player-impact: API Error or Rate Limit');
+    if (err?.status === 429 || (err?.message && err.message.includes('429'))) {
+       console.warn('Gemini API Quota Exceeded (429) in player-impact. Switching to fallback.');
+       ai = null;
+    } else {
+       console.warn('Error in player-impact: API Error or Rate Limit');
+    }
     res.json({ message: 'Местные жители слишком заняты своими проблемами.' });
   }
 });
@@ -583,7 +598,12 @@ Provide JSON output only.`;
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
   } catch (err: any) {
-    console.warn('Error generating quest: API Error or Rate Limit');
+    if (err?.status === 429 || (err?.message && err.message.includes('429'))) {
+       console.warn('Gemini API Quota Exceeded (429) in generating quest. Switching to fallback.');
+       ai = null;
+    } else {
+       console.warn('Error generating quest: API Error or Rate Limit');
+    }
     res.json({
         title: "Сбой связи с Режиссером",
         description: "Древние силы прервали сигнал. Ваша задача - просто выжить в эту эпоху.",
@@ -663,7 +683,12 @@ Keep it immersive, translating game mechanics into story consequences. Language:
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
   } catch (err: any) {
-    console.warn('Error generating dynamic quests: API Error or Rate Limit');
+    if (err?.status === 429 || (err?.message && err.message.includes('429'))) {
+       console.warn('Gemini API Quota Exceeded (429) in generating dynamic quests. Switching to fallback.');
+       ai = null;
+    } else {
+       console.warn('Error generating dynamic quests: API Error or Rate Limit');
+    }
     res.json({
       quests: [
         {
@@ -724,7 +749,12 @@ Format standard output JSON:
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
   } catch (err: any) {
-    console.warn('Error gathering lore: API Error or Rate Limit');
+    if (err?.status === 429 || (err?.message && err.message.includes('429'))) {
+       console.warn('Gemini API Quota Exceeded (429) in gathering lore. Switching to fallback.');
+       ai = null;
+    } else {
+       console.warn('Error gathering lore: API Error or Rate Limit');
+    }
     res.json({
       title: 'Ошибка Архива',
       text: 'В данный момент не удалось получить доступ к древним хроникам Норрата. Магические помехи.'
@@ -773,7 +803,12 @@ Keep it under 100 words. Return JSON:
     const parsed = JSON.parse(response.text || '{}');
     res.json(parsed);
   } catch (err: any) {
-    console.warn('Error making DM combat summary: API Error or Rate Limit');
+    if (err?.status === 429 || (err?.message && err.message.includes('429'))) {
+       console.warn('Gemini API Quota Exceeded (429) in making DM combat summary. Switching to fallback.');
+       ai = null;
+    } else {
+       console.warn('Error making DM combat summary: API Error or Rate Limit');
+    }
     res.json({
       description: `Стремительный обмен ударами в гуще боя! Пыль столбом. Вы продолжаете сражаться с врагом!`,
     });

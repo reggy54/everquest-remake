@@ -125,7 +125,7 @@ export default function BankTab({ character, language, onUpdateCharacter, trigge
           <div className="absolute top-8 left-4 z-40 hidden lg:flex items-start gap-4 pointer-events-none">
              <div className="flex flex-col items-center">
                 <span className="text-[#60a5fa] font-bold text-[10px] uppercase bg-black/60 px-2 rounded-t drop-shadow-[1px_1px_0_#000]">Брогнир</span>
-                <div className="w-20 h-20 bg-[url('https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=DwarfKeeper&backgroundColor=111')] bg-cover border-[3px] border-[#3a4863] rounded-b shadow-[0_0_15px_rgba(0,0,0,1)]"></div>
+                <div className="w-20 h-20 bg-[url('https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=DwarfKeeper&backgroundColor=111&skinColor=e0ac69')] bg-cover border-[3px] border-[#3a4863] rounded-b shadow-[0_0_15px_rgba(0,0,0,1)]"></div>
              </div>
              
              <div className="mt-2 bg-[#1b2233] text-[#e2e8f0] border border-[#3a4863] px-3 py-2 rounded-lg text-xs font-serif max-w-[200px] shadow-[0_4px_15px_rgba(0,0,0,0.8)] relative">
