@@ -344,8 +344,9 @@ export default function CharacterSheetTab({ character, onUpdateCharacter, trigge
             {/* Character Info (Top) */}
             <div className="absolute top-16 text-center z-20 drop-shadow-[2px_2px_0_#000]">
                <div className="text-white font-serif text-xl tracking-wider">{character.name}</div>
-               <div className="text-[#ffb600] text-xs font-mono uppercase tracking-widest mt-1">
+               <div className="text-[#ffb600] text-[11px] font-mono uppercase tracking-widest mt-1">
                  Ур. {character.level} • {character.race} • {character.class}
+                 {character.specialization ? ` | ${character.specialization}` : (character.level >= 30 ? ' | НЕТ СПЕКА' : '')}
                </div>
             </div>
 

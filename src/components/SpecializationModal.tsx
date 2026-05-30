@@ -71,8 +71,8 @@ export default function SpecializationModal({ character, onSelect, language }: S
     return () => clearTimeout(timer);
   }, []);
 
-  const getIcon = (iconName: string, colorClass: string) => {
-    const props = { className: `w-12 h-12 ${colorClass} mb-4 filter drop-shadow-[0_0_10px_currentColor]` };
+  const getIcon = (iconName: string, extraClasses: string = 'w-10 h-10') => {
+    const props = { className: `${extraClasses} filter drop-shadow-[0_0_8px_currentColor]` };
     switch (iconName) {
       case 'skull': return <Skull {...props} />;
       case 'swords': return <Swords {...props} />;
@@ -86,7 +86,8 @@ export default function SpecializationModal({ character, onSelect, language }: S
       case 'ghost': return <Ghost {...props} />;
       case 'droplet': return <Droplet {...props} />;
       case 'heart': return <Heart {...props} />;
-      case 'crosshair': return <Target {...props} />;
+      case 'crosshair': return <Crosshair {...props} />;
+      case 'target': return <Target {...props} />;
       default: return <Swords {...props} />;
     }
   };
@@ -134,92 +135,113 @@ export default function SpecializationModal({ character, onSelect, language }: S
   }
 
   return (
-    <div className="fixed inset-0 z-[120] bg-black/80 flex flex-col items-center justify-center p-4 lg:p-12 overflow-hidden animate-fade-in relative">
+    <div className="fixed inset-0 z-[9999] bg-[#06070a] flex flex-col overflow-hidden animate-fade-in select-none">
       {/* Background temple with runes */}
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1601662528567-526cd06f6582?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center opacity-30 mix-blend-overlay z-0" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black z-0 pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1601662528567-526cd06f6582?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center opacity-15 mix-blend-overlay z-0 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#06070a] via-[#06070a]/90 to-transparent z-0 pointer-events-none" />
       
-      {/* Central Framed Title */}
-      <div className="z-20 text-center mb-8 relative">
-        <h2 className="text-[#ffd700] text-3xl md:text-5xl font-black uppercase tracking-[0.1em] drop-shadow-[2px_2px_4px_#000] relative px-12 py-4" style={{ fontFamily: 'Friz Quadrata, "Times New Roman", serif', textShadow: '0 0 20px rgba(212,175,55,0.6), 2px 2px 2px #000' }}>
+      {/* Central Framed Title - Non-scrolling with safe area */}
+      <div className="relative z-10 text-center pt-6 pb-2 shrink-0 w-full px-4">
+        <h2 className="text-[#ffd700] text-xl md:text-4xl lg:text-5xl flex items-center justify-center font-black uppercase tracking-[0.1em] drop-shadow-[2px_2px_4px_#000] relative px-4 lg:px-12 py-3 text-center" style={{ fontFamily: 'Friz Quadrata, "Times New Roman", serif', textShadow: '0 0 15px rgba(212,175,55,0.5)' }}>
           {language === 'ru' ? 'Выбор Пути' : 'Choose Your Path'}
-          
-          <div className="absolute top-0 left-0 bottom-0 right-0 border-y-2 border-[#8b6508] opacity-50 bg-gradient-to-r from-transparent via-[#8b6508] to-transparent pointer-events-none -z-10" style={{ mixBlendMode: 'overlay' }} />
         </h2>
+        <div className="w-48 h-0.5 bg-gradient-to-r from-transparent via-[#8b6508] to-transparent mx-auto mt-1 opacity-60" />
       </div>
 
-      <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 relative z-10 h-full max-h-[700px]">
-        {specs.map((spec, idx) => (
-          <div 
-            key={spec.id}
-            onMouseEnter={() => setHoveredSpec(spec.id)}
-            onMouseLeave={() => setHoveredSpec(null)}
-            className={`flex-1 flex flex-col items-center p-6 border-4 relative overflow-hidden group cursor-pointer transition-all duration-300 ${
-               hoveredSpec === spec.id 
-                 ? `border-[#d4af37] scale-[1.02] shadow-[0_0_40px_rgba(212,175,55,0.4)]` 
-                 : 'border-metal hover:border-[#8b6508]'
-            } bg-leather shadow-[inset_0_0_50px_rgba(0,0,0,0.9)]`}
-          >
-             {/* Rivets */}
-             <div className="absolute top-2 left-2 w-3 h-3 rounded-full bg-[#111] shadow-[inset_1px_1px_rgba(255,255,255,0.3)] border-2 border-[#000]" />
-             <div className="absolute top-2 right-2 w-3 h-3 rounded-full bg-[#111] shadow-[inset_1px_1px_rgba(255,255,255,0.3)] border-2 border-[#000]" />
-             <div className="absolute bottom-2 left-2 w-3 h-3 rounded-full bg-[#111] shadow-[inset_1px_1px_rgba(255,255,255,0.3)] border-2 border-[#000]" />
-             <div className="absolute bottom-2 right-2 w-3 h-3 rounded-full bg-[#111] shadow-[inset_1px_1px_rgba(255,255,255,0.3)] border-2 border-[#000]" />
+      {/* Swipe support indicator on mobile */}
+      <div className="lg:hidden block text-center text-[10px] text-amber-200/50 uppercase tracking-widest font-mono shrink-0 py-1.5 z-10 animate-pulse">
+        {language === 'ru' ? '← Пролистайте варианты свайпом →' : '← Swipe to browse options →'}
+      </div>
 
-             {/* Glow Background */}
-             <div className={`absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity duration-700 bg-gradient-to-b from-transparent to-[#d4af37] pointer-events-none mix-blend-overlay`} />
+      {/* Scrollable Container block */}
+      <div className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar px-4 pb-24 pt-2 relative z-10 w-full flex flex-col items-center justify-start lg:justify-center">
+        
+        {/* Dynamic Card Area: Grid on lg/desktop; interactive horizontal carousel on md/mobile */}
+        <div className="w-full max-w-7xl flex lg:grid lg:grid-cols-3 gap-5 lg:gap-8 overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory lg:snap-none custom-scrollbar pb-6 lg:pb-0 px-2">
+          {specs.map((spec, idx) => {
+            const isActive = hoveredSpec === spec.id || selectedSpecId === spec.id;
+            return (
+              <div 
+                key={spec.id}
+                onClick={() => setSelectedSpecId(spec.id)}
+                onMouseEnter={() => setHoveredSpec(spec.id)}
+                onMouseLeave={() => setHoveredSpec(null)}
+                className={`snap-center shrink-0 w-[82vw] sm:w-[350px] lg:w-auto flex flex-col items-center p-5 lg:p-7 border-4 relative overflow-hidden group cursor-pointer transition-all duration-300 rounded-xl lg:rounded-none select-none ${
+                   isActive 
+                     ? `border-[#d4af37] scale-[1.01] shadow-[0_0_35px_rgba(212,175,55,0.4)]` 
+                     : 'border-[#3a2f26] hover:border-[#8b6508]'
+                } bg-[#10121a]/95 shadow-[inset_0_0_40px_rgba(0,0,0,0.9)]`}
+              >
+                 {/* Rivets */}
+                 <div className="absolute top-2 left-2 w-2.5 h-2.5 rounded-full bg-[#111] shadow-[inset_1px_1px_rgba(255,255,255,0.3)] border border-[#000]" />
+                 <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-[#111] shadow-[inset_1px_1px_rgba(255,255,255,0.3)] border border-[#000]" />
+                 <div className="absolute bottom-2 left-2 w-2.5 h-2.5 rounded-full bg-[#111] shadow-[inset_1px_1px_rgba(255,255,255,0.3)] border border-[#000]" />
+                 <div className="absolute bottom-2 right-2 w-2.5 h-2.5 rounded-full bg-[#111] shadow-[inset_1px_1px_rgba(255,255,255,0.3)] border border-[#000]" />
 
-             {/* Icon with Frame */}
-             <div className={`w-20 h-20 bg-[#111] border-2 border-[#333] shadow-[inset_0_0_20px_#000,0_4px_10px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:border-[#d4af37] relative`}>
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-paper.png')] opacity-30 mix-blend-screen pointer-events-none" />
-                <div className={`filter drop-shadow-[0_0_10px_currentColor] z-10 ${spec.color}`}>
-                   {getIcon(spec.icon, '')}
-                </div>
-             </div>
-             
-             <h3 className={`text-2xl md:text-3xl font-black uppercase tracking-widest mb-2 drop-shadow-[2px_2px_0_#000] text-center`} style={{ fontFamily: 'Friz Quadrata, "Times New Roman", serif', color: hoveredSpec === spec.id ? '#ffd700' : '#e5c07b' }}>
-                {spec.name}
-             </h3>
-             
-             <p className="text-[#ccc] text-center text-sm mb-6 h-12 w-full pb-4 leading-normal drop-shadow-[1px_1px_0_#000]" style={{ fontFamily: 'Georgia, serif' }}>
-                "{spec.desc}"
-             </p>
+                 {/* Glow Background */}
+                 <div className={`absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-700 bg-gradient-to-b from-transparent to-[#d4af37] pointer-events-none mix-blend-overlay`} />
 
-             {/* Decorative separator */}
-             <div className="w-full h-1 bg-gradient-to-r from-transparent via-[#8b6508] to-transparent mb-6" />
+                 {/* Icon with Frame */}
+                 <div className={`w-16 h-16 bg-[#111] border-2 border-[#3a2f26] shadow-[inset_0_0_15px_#000,0_4px_8px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center mb-3.5 transition-transform duration-300 group-hover:scale-105 group-hover:border-[#d4af37] relative shrink-0`}>
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-paper.png')] opacity-30 mix-blend-screen pointer-events-none" />
+                    <div className={`filter drop-shadow-[0_0_10px_currentColor] z-10 ${spec.color}`}>
+                       {getIcon(spec.icon, 'w-9 h-9')}
+                    </div>
+                 </div>
+                 
+                 <h3 className="text-xl lg:text-2xl font-black uppercase tracking-widest mb-1.5 drop-shadow-[2px_2px_0_#000] text-center" style={{ fontFamily: 'Friz Quadrata, "Times New Roman", serif', color: isActive ? '#ffd700' : '#e5c07b' }}>
+                    {spec.name}
+                 </h3>
+                 
+                 <p className="text-[#ccc] text-center text-xs lg:text-sm mb-4 min-h-[3.2rem] w-full pb-2 leading-relaxed drop-shadow-[1px_1px_0_#000] line-clamp-3 overflow-hidden" style={{ fontFamily: 'Georgia, serif' }}>
+                    "{spec.desc}"
+                 </p>
 
-             <div className="w-full space-y-3 mb-auto text-left px-2">
-               {spec.traits.map((trait, tIdx) => (
-                  <div key={tIdx} className="flex items-center gap-3 text-[#e2e8f0] font-sans text-xs uppercase tracking-wide drop-shadow-[1px_1px_0_#000]">
-                    <div className={`w-1.5 h-1.5 rotate-45 border border-[#8b6508] shadow-[0_0_5px_rgba(212,175,55,0.8)] ${spec.color.replace('text-', 'bg-')}`} />
-                    {trait}
-                  </div>
-               ))}
-             </div>
-             
-             <div className="w-full mt-6 flex justify-center relative z-10 pt-4 border-t border-[#333]">
-               {selectedSpecId === spec.id ? (
-                 <button 
-                   onClick={() => onSelect(spec.id)}
-                   className="btn-classic px-8 py-3 text-sm font-bold uppercase tracking-widest animate-pulse shadow-[0_0_20px_rgba(212,175,55,0.6)]"
-                 >
-                   {language === 'ru' ? 'Подтвердить Выбор' : 'Confirm Selection'}
-                 </button>
-               ) : (
-                 <button 
-                   onClick={() => setSelectedSpecId(spec.id)}
-                   className={`w-full py-3 border text-xs font-bold uppercase tracking-widest transition-all duration-300 shadow-[0_4px_10px_rgba(0,0,0,0.8)] ${
-                     hoveredSpec === spec.id 
-                       ? `btn-classic scale-105` 
-                       : 'bg-[#1a1a1a] text-[#aaa] border-[#333] hover:text-white hover:border-[#555]'
-                   }`}
-                 >
-                   {language === 'ru' ? 'Избрать этот Путь' : 'Choose This Path'}
-                 </button>
-               )}
-             </div>
-          </div>
-        ))}
+                 {/* Decorative separator */}
+                 <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-[#8b6508] to-transparent mb-4 shrink-0 opacity-75" />
+
+                 {/* Feature list */}
+                 <div className="w-full space-y-2 mb-4 text-left px-1 flex-1">
+                   {spec.traits.map((trait, tIdx) => (
+                      <div key={tIdx} className="flex items-center gap-2.5 text-[#e2e8f0] font-sans text-[10px] lg:text-xs uppercase tracking-wide drop-shadow-[1px_1px_0_#000]">
+                        <div className={`w-1.5 h-1.5 rotate-45 border border-[#8b6508] shadow-[0_0_5px_rgba(212,175,55,0.8)] ${spec.color.replace('text-', 'bg-')}`} />
+                        <span className="truncate">{trait}</span>
+                      </div>
+                   ))}
+                 </div>
+                 
+                 {/* Compact Action Panel */}
+                 <div className="w-full mt-auto flex justify-center relative z-10 pt-3 border-t border-[#3a2f26] shrink-0">
+                   {selectedSpecId === spec.id ? (
+                     <button 
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         onSelect(spec.id);
+                       }}
+                       className="btn-classic px-7 py-2.5 text-xs font-bold uppercase tracking-widest animate-pulse shadow-[0_0_15px_rgba(212,175,55,0.6)] cursor-pointer"
+                     >
+                       {language === 'ru' ? 'Подтвердить' : 'Confirm'}
+                     </button>
+                   ) : (
+                     <button 
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         setSelectedSpecId(spec.id);
+                       }}
+                       className={`w-full py-2.5 border text-[10px] font-bold uppercase tracking-widest transition-all duration-300 shadow-[0_4px_8px_rgba(0,0,0,0.8)] cursor-pointer ${
+                         isActive 
+                           ? `btn-classic scale-[1.02]` 
+                           : 'bg-[#121212] text-[#aaa] border-[#312a20] hover:text-white hover:border-[#5c4a3d]'
+                       }`}
+                     >
+                       {language === 'ru' ? 'Выбрать' : 'Choose'}
+                     </button>
+                   )}
+                 </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

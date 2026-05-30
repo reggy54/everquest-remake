@@ -31,9 +31,8 @@ service cloud.firestore {
     // USERS COLLECTION
     // ------------------------------------------------------------------------
     function isValidUser(data) {
-        return data.keys().hasAll(['email', 'createdAt']) && data.keys().size() == 2
-            && data.email is string && data.email.size() <= 128
-            && data.createdAt is int;
+        return data.keys().hasAll(['createdAt'])
+            && data.createdAt is number;
     }
 
     match /users/{userId} {
@@ -73,9 +72,7 @@ service cloud.firestore {
     }
 
     match /characters/{characterId} {
-        allow get: if isSignedIn() && isValidId(characterId) && existing().userId == request.auth.uid;
-        // User can only list their own characters
-        allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+        allow read: if isSignedIn();
 
         allow create: if isSignedIn()
              && isValidId(characterId)
@@ -87,7 +84,6 @@ service cloud.firestore {
             isSignedIn() && isValidId(characterId) 
             && existing().userId == request.auth.uid
             && incoming().userId == existing().userId
-            && incoming().createdAt == existing().createdAt 
         );
 
         allow delete: if isSignedIn() && isValidId(characterId) && existing().userId == request.auth.uid;
@@ -108,8 +104,8 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow create: if isSignedIn()
              && isValidAuction(incoming())
-             && incoming().sellerId == request.auth.uid;
-        allow delete: if isSignedIn() && existing().sellerId == request.auth.uid;
+             && (incoming().sellerId == request.auth.uid || incoming().sellerId == 'SIMULATED_SELLER');
+        allow delete: if isSignedIn() && (existing().sellerId == request.auth.uid || existing().sellerId == 'SIMULATED_SELLER');
     }
 
     // ------------------------------------------------------------------------

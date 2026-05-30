@@ -76,9 +76,9 @@ service cloud.firestore {
     }
 
     match /characters/{characterId} {
-        allow get: if isSignedIn() && isValidId(characterId) && existing().userId == request.auth.uid;
-        // User can only list their own characters
-        allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+        allow get: if isSignedIn() && isValidId(characterId) && (existing().userId == request.auth.uid || existing().activeZoneId != null);
+        // User can only list their own characters or characters active in any zone
+        allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.activeZoneId != null);
 
         allow create: if isSignedIn()
              && isValidId(characterId)
@@ -93,13 +93,66 @@ service cloud.firestore {
             isSignedIn() && isValidId(characterId) 
             && existing().userId == request.auth.uid
             && incoming().userId == existing().userId
-            && incoming().createdAt == existing().createdAt 
-            && incoming().updatedAt == request.time.toMillis()
-            // We allow all fields to be modified (level up, exp, items) by the owner for this simple MMO case
-            // Normally this should be in actions, but in our system the client acts as the authoritative source
         );
 
         allow delete: if isSignedIn() && isValidId(characterId) && existing().userId == request.auth.uid;
+    }
+
+    // ------------------------------------------------------------------------
+    // AUCTIONS COLLECTION
+    // ------------------------------------------------------------------------
+    function isValidAuction(data) {
+        return data.keys().hasAll(['sellerName', 'sellerId', 'item', 'price', 'createdAt'])
+            && data.sellerName is string
+            && data.sellerId is string
+            && data.price is number
+            && data.createdAt is int;
+    }
+
+    match /auctions/{auctionId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+             && isValidAuction(incoming())
+             && (incoming().sellerId == request.auth.uid || incoming().sellerId == 'SIMULATED_SELLER');
+        allow delete: if isSignedIn() && (existing().sellerId == request.auth.uid || existing().sellerId == 'SIMULATED_SELLER');
+    }
+
+    // ------------------------------------------------------------------------
+    // CHAT MESSAGES COLLECTION
+    // ------------------------------------------------------------------------
+    function isValidChatMessage(data) {
+        return data.keys().hasAll(['sender', 'userId', 'text', 'channel', 'createdAt'])
+            && data.sender is string
+            && data.userId is string
+            && data.text is string && data.text.size() <= 500
+            && data.channel is string
+            && data.createdAt is int;
+    }
+
+    match /chat_messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+             && isValidChatMessage(incoming())
+             && incoming().userId == request.auth.uid;
+        allow delete: if false; // no deleting chat messages
+    }
+
+    // ------------------------------------------------------------------------
+    // BANK ITEMS COLLECTION (GLOBAL SHARED)
+    // ------------------------------------------------------------------------
+    function isValidBankItem(data) {
+        return data.keys().hasAll(['item', 'depositorName', 'createdAt'])
+            && data.depositorName is string
+            && data.createdAt is int;
+    }
+
+    match /bank_items/{itemId} {
+        // Anyone can read and interact with the global bank
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+             && isValidBankItem(incoming());
+        // Anyone can withdraw an item
+        allow delete: if isSignedIn(); 
     }
   }
 }

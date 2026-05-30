@@ -36,6 +36,11 @@ export const registerWithUsername = async (username: string, password: string) =
     await createUserWithEmailAndPassword(auth, email, password);
 };
 
+export const loginAnonymously = async () => {
+    const { signInAnonymously } = await import('firebase/auth');
+    await signInAnonymously(auth);
+};
+
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',

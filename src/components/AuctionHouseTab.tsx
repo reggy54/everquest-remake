@@ -3,6 +3,7 @@ import { PlayerCharacter, Item } from '../types';
 import { Search, Gavel, Coins, Shield, Swords, Package, FlaskConical, Clock, Filter, X, Hammer } from 'lucide-react';
 import { db, handleFirestoreError, OperationType, auth } from '../lib/firebase';
 import { collection, query, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { COMMON_TEMPLATES } from '../data/gameData';
 
 interface AuctionHouseTabProps {
   character: PlayerCharacter;
@@ -84,8 +85,47 @@ export default function AuctionHouseTab({ character, language, onUpdateCharacter
              hasBid: false
           };
        });
-       // Just to have some data, if empty add fake ones? Nah let's just show real data
        setListings(auctionLots);
+
+       // Self-seeding: if there are fewer than 8 listings, add some premium mock listings
+       if (snapshot.size < 8) {
+          const seedAuctions = async () => {
+             const itemsToSeed = [
+                { id: 'leg-tfury', name: 'Громовая Ярость, Благословенный клинок Искателя Ветра', slot: 'primary', description: 'Легендарный длинный меч, наделенный силой заточённого принца воздуха. Сверкает молниями.', price: 1200, rarity: 'legendary', stats: { str: 22, agi: 22, sta: 15, ac: 15 }, allowedClasses: ['Warrior', 'Paladin', 'Rogue'] },
+                { id: 'leg-atiesh', name: 'Атиеш, Большой посох Хранителя', slot: 'primary', description: 'Древний посох, передаваемый величайшим магам Азерота. Излучает чистейшую арканную силу.', price: 1450, rarity: 'legendary', stats: { int: 35, wis: 35, mana: 150, hp: 80 }, allowedClasses: ['Mage', 'Priest'] },
+                { id: 'leg-thoridal', name: 'Тори\'дал, Ярость Звезд', slot: 'primary', description: 'Волшебный лук, не требующий стрел — он материализует снаряды из звёздного света.', price: 1100, rarity: 'legendary', stats: { agi: 30, dex: 25, hp: 60 }, allowedClasses: ['Ranger', 'Rogue'] },
+                { id: 'leg-bulwark', name: 'Мерцающий Оплот Аззинота', slot: 'secondary', description: 'Легендарный ростовой щит из монолитного чёрного обсидиана, выдерживающий удары полубогов.', price: 950, rarity: 'legendary', stats: { sta: 45, str: 12, ac: 75, hp: 120 }, allowedClasses: ['Warrior', 'Paladin'] },
+                { id: 'ghoulbane', name: 'Клирик-Паладинский Бич Проклятых', slot: 'primary', description: 'Легендарный сияющий клинок праведного гнева, наносящий двойной урон нежити.', price: 320, rarity: 'epic', stats: { str: 14, wis: 8, ac: 10, hp: 50 }, allowedClasses: ['Paladin', 'Priest'] },
+                { id: 'epic-acc-neck', name: 'Ожерелье Ткача Грез', slot: 'amulet', description: 'Изумрудный кулон, в котором заключено вечное созидательное спокойствие Изумрудного Сна.', price: 380, rarity: 'epic', stats: { wis: 14, int: 14, mana: 75, hp: 40 } },
+                { id: 'mana-ring', name: 'Сверкающее платиновое кольцо', slot: 'secondary', description: 'Сверкающий перстень, наделенный чистой эссенцией маны.', price: 65, rarity: 'rare', stats: { int: 5, wis: 5, mana: 30 }, allowedClasses: ['Mage', 'Summoner', 'Priest', 'Shaman'] },
+                { id: 'pot-ultimate-power', name: 'Эликсир Абсолютной Силы', slot: 'waist', description: 'Мощнейшее зелье алхимиков, мгновенно повышающее все боевые характеристики.', price: 75, rarity: 'epic', stats: { str: 6, int: 6, sta: 6, hp: 30, mana: 30 } },
+                { id: 'w-wpn-2', name: 'Искаженный Топор Разлома', slot: 'primary', description: 'Пульсирует темной энергией.', price: 95, rarity: 'rare', stats: { str: 8, sta: 4, hp: 15 }, allowedClasses: ['Warrior'] },
+                { id: 'rubicund-breastplate', name: 'Рубиновый нагрудник', slot: 'chest', description: 'Легендарный сияющий доспех защитников Этернии.', price: 195, rarity: 'epic', stats: { str: 10, sta: 12, ac: 25, hp: 80 }, allowedClasses: ['Warrior', 'Paladin', 'Priest'] },
+                { id: 'r-wpn-3', name: 'Лук Пронзающего Ветра', slot: 'primary', description: 'Стрелы летят быстрее звука.', price: 135, rarity: 'epic', stats: { agi: 9, dex: 6, ac: 2 }, allowedClasses: ['Ranger'] },
+                { id: 'res-rune-fate', name: 'Руна Вечной Судьбы', slot: 'waist', description: 'Сверкающий рунический камень. Используется для изменения и закалки судеб.', price: 110, rarity: 'rare', stats: { str: 5, int: 5, wis: 5, agi: 5 } }
+             ];
+
+             const names = COMMON_TEMPLATES.simulatedNames || [
+                'Ogre_Mouth', 'Elf_Princess', 'Dwarf_Miner', 'Heil_Vandor', 'Fippy_Darkpaw', 'Lady_Vox'
+             ];
+
+             const existingIds = snapshot.docs.map(doc => doc.data().item?.id).filter(Boolean);
+
+             for (const item of itemsToSeed) {
+                if (!existingIds.includes(item.id)) {
+                   const randomName = names[Math.floor(Math.random() * names.length)];
+                   await addDoc(collection(db, 'auctions'), {
+                      sellerName: randomName,
+                      sellerId: 'SIMULATED_SELLER',
+                      item: item,
+                      price: Math.floor(item.price * (0.85 + Math.random() * 0.3)),
+                      createdAt: Date.now() - Math.floor(Math.random() * 18 * 3600 * 1000)
+                   });
+                }
+             }
+          };
+          seedAuctions().catch(console.error);
+       }
     }, (error) => {
        console.error("Auctions error:", error);
     });
@@ -147,6 +187,7 @@ export default function AuctionHouseTab({ character, language, onUpdateCharacter
        triggerAlert(language === 'ru' ? `Выкуплен предмет: ${selectedListing.item.name}` : `Bought item: ${selectedListing.item.name}`, 'success');
        setSelectedListing(null);
     } catch (e) {
+       handleFirestoreError(e, OperationType.DELETE, `auctions/${selectedListing.id}`);
        triggerAlert('Error buying item.', 'error');
     }
   };
@@ -178,6 +219,7 @@ export default function AuctionHouseTab({ character, language, onUpdateCharacter
         setIsCreatingAuction(false);
         setSelectedInventoryItem(null);
      } catch(e) {
+        handleFirestoreError(e, OperationType.CREATE, 'auctions');
         triggerAlert('Error creating auction.', 'error');
      }
   };

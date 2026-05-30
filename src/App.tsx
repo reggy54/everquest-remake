@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { initTelegramWebApp, triggerHaptic, shareTelegramInvite, getTelegramWebApp } from './lib/telegram';
 import { PlayerCharacter, Zone, Item, Spell, ChatMessage, SlotType } from './types';
 import CharacterCreator from './components/CharacterCreator';
 import OnboardingCinematic from './components/OnboardingCinematic';
@@ -171,28 +172,17 @@ import { doc, getDoc, setDoc, collection, getDocs, onSnapshot, query, where } fr
 const AuthErrorModal = ({ message, onTryAgain }: { message: string; onTryAgain: () => void }) => {
   if (!message) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-slate-900 border border-rose-900/60 rounded-xl max-w-sm w-full p-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-bl-full pointer-events-none" />
-        <div className="flex flex-col items-center text-center space-y-4 relative z-10">
-          <div className="bg-rose-950/80 p-3 rounded-full border border-rose-800 shrink-0">
-            <AlertCircle className="h-8 w-8 text-rose-500" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-white mb-2 font-serif">Ошибка авторизации</h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              {message}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onTryAgain}
-            className="w-full mt-2 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-lg transition-colors border border-slate-700 flex items-center justify-center gap-2 uppercase tracking-wide text-xs cursor-pointer"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Попробовать снова
-          </button>
-        </div>
+    <div className="bg-rose-950/50 border border-rose-900/50 rounded-lg p-4 mb-4 flex items-start gap-3 w-full">
+      <AlertCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
+      <div className="flex-1">
+        <h3 className="text-sm font-bold text-rose-400 mb-1">Ошибка</h3>
+        <p className="text-xs text-rose-200">{message}</p>
+        <button
+          onClick={onTryAgain}
+          className="mt-2 text-[10px] text-rose-300 hover:text-white uppercase tracking-wider font-bold underline"
+        >
+          Очистить
+        </button>
       </div>
     </div>
   );
@@ -253,6 +243,53 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { uid: string,
     }
   };
 
+  const tg = getTelegramWebApp();
+  const isTelegram = tg && tg.platform && tg.platform !== 'unknown';
+
+  const handleTelegramLogin = async () => {
+      setErrorVal('');
+      setLoading(true);
+
+      const tgUser = tg?.initDataUnsafe?.user;
+      
+      try {
+          const { loginAnonymously, loginWithUsername, registerWithUsername } = await import('./lib/firebase');
+
+          if (tgUser?.id) {
+              const pseudoUsername = `tg_${tgUser.id}`;
+              const pseudoPassword = `tg_pass_${tgUser.id}_secret`;
+              
+              try {
+                  await loginWithUsername(pseudoUsername, pseudoPassword);
+                  setLoading(false);
+                  return;
+              } catch (err: any) {
+                  if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+                     try {
+                        await registerWithUsername(pseudoUsername, pseudoPassword);
+                        setLoading(false);
+                        return;
+                     } catch (regErr: any) {
+                        if (regErr.code !== 'auth/admin-restricted-operation' && regErr.code !== 'auth/operation-not-allowed') {
+                            throw regErr;
+                        }
+                     }
+                  } else if (err.code !== 'auth/admin-restricted-operation' && err.code !== 'auth/operation-not-allowed') {
+                     throw err;
+                  }
+              }
+          }
+
+          // Fallback to anonymous login
+          await loginAnonymously();
+      } catch (err: any) {
+          console.error("Telegram Login Error:", err);
+          setErrorVal(`Ошибка входа: ${err.message || err.code}`);
+      } finally {
+          setLoading(false);
+      }
+  };
+
   return (
     <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden" style={{ minHeight: '100vh', backgroundImage: 'radial-gradient(circle at center, rgb(15, 23, 42) 0%, rgb(2, 6, 23) 100%)' }}>
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
@@ -280,92 +317,116 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: (user: { uid: string,
           <AuthErrorModal message={errorVal} onTryAgain={() => setErrorVal('')} />
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 mb-4">
-          <div>
-            <label className="block text-[11px] font-mono text-slate-400 uppercase tracking-wider font-bold mb-1.5">
-              Имя Персонажа / Логин
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              disabled={loading}
-              placeholder="Введите ваше имя"
-              className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-sm py-2.5 px-3.5 rounded-lg focus:outline-none focus:border-amber-500 transition-all font-mono"
-            />
+        {isTelegram ? (
+          <div className="space-y-4">
+             <button
+               type="button"
+               onClick={handleTelegramLogin}
+               disabled={loading}
+               className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition-all border border-blue-500 flex items-center justify-center gap-2 uppercase tracking-wide text-sm cursor-pointer"
+             >
+               {loading ? (
+                 <Loader2 className="h-5 w-5 animate-spin text-white" />
+               ) : (
+                 '🚀 Вход через Telegram'
+               )}
+             </button>
+             <p className="text-center text-[10px] text-slate-400 font-mono mt-4">Нажмите для быстрой автоматической авторизации в игре.</p>
           </div>
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} className="space-y-4 mb-4">
+              <div>
+                <label className="block text-[11px] font-mono text-slate-400 uppercase tracking-wider font-bold mb-1.5">
+                  Имя Персонажа / Логин
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  disabled={loading}
+                  placeholder="Введите ваше имя"
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-sm py-2.5 px-3.5 rounded-lg focus:outline-none focus:border-amber-500 transition-all font-mono"
+                />
+              </div>
 
-          <div>
-            <label className="block text-[11px] font-mono text-slate-400 uppercase tracking-wider font-bold mb-1.5">
-              Пароль к Вратам (мин. 6 симв.)
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              placeholder="••••••••"
-              className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-sm py-2.5 px-3.5 rounded-lg focus:outline-none focus:border-amber-500 transition-all font-mono"
-            />
-          </div>
+              <div>
+                <label className="block text-[11px] font-mono text-slate-400 uppercase tracking-wider font-bold mb-1.5">
+                  Пароль к Вратам (мин. 6 симв.)
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-sm py-2.5 px-3.5 rounded-lg focus:outline-none focus:border-amber-500 transition-all font-mono"
+                />
+              </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 rounded-lg text-xs uppercase tracking-widest cursor-pointer transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-950/20"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
-            ) : isRegistering ? (
-              'Принять Присягу (Регистрация)'
-            ) : (
-              'Войти в Игровой Мир'
-            )}
-          </button>
-        </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 rounded-lg text-xs uppercase tracking-widest cursor-pointer transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-950/20"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
+                ) : isRegistering ? (
+                  'Принять Присягу (Регистрация)'
+                ) : (
+                  'Войти в Игровой Мир'
+                )}
+              </button>
+            </form>
 
-        <div className="text-center mb-6">
-          <button
-            type="button"
-            onClick={() => {
-              setIsRegistering(!isRegistering);
-              setErrorVal('');
-            }}
-            disabled={loading}
-            className="text-amber-500 hover:text-amber-400 text-xs font-mono underline underline-offset-4 decoration-dotted cursor-pointer"
-          >
-            {isRegistering ? 'Уже есть аккаунт? Войти' : 'Впервые у нас? Регистрация аккаунта'}
-          </button>
-        </div>
+            <div className="text-center mb-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegistering(!isRegistering);
+                  setErrorVal('');
+                }}
+                disabled={loading}
+                className="text-amber-500 hover:text-amber-400 text-xs font-mono underline underline-offset-4 decoration-dotted cursor-pointer"
+              >
+                {isRegistering ? 'Уже есть аккаунт? Войти' : 'Впервые у нас? Регистрация аккаунта'}
+              </button>
+            </div>
+          </>
+        )}
         
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-slate-800" />
-          </div>
-          <div className="relative flex justify-center text-[10px] font-mono">
-            <span className="bg-slate-900 px-2 text-slate-500">ИЛИ</span>
-          </div>
-        </div>
+        {!isTelegram && (
+          <>
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-slate-800" />
+              </div>
+              <div className="relative flex justify-center text-[10px] font-mono">
+                <span className="bg-slate-900 px-2 text-slate-500">ИЛИ</span>
+              </div>
+            </div>
 
-        <div className="space-y-4">
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-2.5 rounded-lg text-xs uppercase tracking-widest cursor-pointer transition-all flex items-center justify-center gap-2 shadow-lg"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-slate-200" />
-            ) : (
-              'Авторизация через Google'
-            )}
-          </button>
-        </div>
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-2.5 rounded-lg text-xs uppercase tracking-widest cursor-pointer transition-all flex items-center justify-center gap-2 shadow-lg"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-slate-200" />
+                ) : (
+                  'Авторизация через Google'
+                )}
+              </button>
+            </div>
+          </>
+        )}
 
         <div className="mt-8 bg-slate-950/40 border border-slate-800/60 p-3 rounded-lg text-[10px] leading-relaxed space-y-1 text-slate-500 mt-6">
           <p className="font-bold text-slate-400 font-mono uppercase tracking-wide">💡 Памятка странника:</p>
           <p>• Тщательно сохраняйте ваш логин и пароль. Мир помнит каждого героя.</p>
-          <p>• Также доступна быстрая авторизация через Google, чтобы не запоминать пароль!</p>
+          {!isTelegram && <p>• Также доступна быстрая авторизация через Google, чтобы не запоминать пароль!</p>}
         </div>
       </div>
     </div>
@@ -379,6 +440,12 @@ import NPCDialogWindow from './components/NPCDialogWindow';
 export default function App() {
   const [user, setUser] = useState<{ uid: string, username: string; email: string; isAdmin: boolean } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string>('');
+
+  // Initialize Telegram WebApp elements on startup
+  useEffect(() => {
+    initTelegramWebApp();
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -389,18 +456,24 @@ export default function App() {
           const snapshot = await getDoc(userRef);
           if (!snapshot.exists()) {
              await setDoc(userRef, {
-               email: firebaseUser.email,
+               email: firebaseUser.email || null,
                createdAt: Date.now()
              });
           }
+          const tg = getTelegramWebApp();
+          const tgUser = tg?.initDataUnsafe?.user;
+          const tgName = tgUser?.username || tgUser?.first_name || '';
+
           setUser({
             uid: firebaseUser.uid,
-            username: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Unknown',
+            username: firebaseUser.displayName || tgName || firebaseUser.email?.split('@')[0] || 'Unknown',
             email: firebaseUser.email || '',
             isAdmin: firebaseUser.email === 'reggy824@gmail.com' || false // Can be expanded
           });
-        } catch (error) {
-           handleFirestoreError(error, OperationType.GET, 'users');
+        } catch (error: any) {
+           console.error("Firestore Error in Auth: ", error);
+           setAuthError(`Ошибка профиля: ${error.message || error.code || 'Неизвестная ошибка'}`);
+           setUser(null); // Fallback to unauthenticated state if firestore read fails
         }
       } else {
         setUser(null);
@@ -411,6 +484,7 @@ export default function App() {
   }, []);
 
   const [characters, setCharacters] = useState<PlayerCharacter[]>([]);
+  const [onlinePlayers, setOnlinePlayers] = useState<any[]>([]);
   const [charactersLoaded, setCharactersLoaded] = useState(false);
   const [isCreatingCharacter, setIsCreatingCharacter] = useState(false);
   const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
@@ -426,6 +500,13 @@ export default function App() {
   const [questSubTab, setQuestSubTab] = useState<'msq' | 'side' | 'ai'>('msq');
 
   const [language, setLanguage] = useState<'ru'|'en'>('ru');
+
+  // Universal effect for Telegram haptic success on level-up
+  useEffect(() => {
+    if (pendingLevelUp) {
+      triggerHaptic.success();
+    }
+  }, [pendingLevelUp]);
   const dic = {
     'ru': {
       'logout': 'Выйти из мира',
@@ -598,6 +679,13 @@ export default function App() {
   // Dynamic quest generator
   const [questLoading, setQuestLoading] = useState(false);
 
+  // MSQ Interactive States
+  const [activeMsqCombatId, setActiveMsqCombatId] = useState<string | null>(null);
+  const [isMsqExploring, setIsMsqExploring] = useState<boolean>(false);
+  const [msqExploreProgress, setMsqExploreProgress] = useState<number>(0);
+  const [msqExploreText, setMsqExploreText] = useState<string>('');
+  const [msqKillCount, setMsqKillCount] = useState<number>(0);
+
   // Combat States
   const [inCombat, setInCombat] = useState<boolean>(false);
   const [combatMonster, setCombatMonster] = useState<{ name: string; level: number; hp: number; maxHp: number; isBoss?: boolean } | null>(null);
@@ -612,6 +700,9 @@ export default function App() {
   const [stamina, setStamina] = useState<number>(100);
   const [spellCooldowns, setSpellCooldowns] = useState<Record<string, number>>({});
   const [comboField, setComboField] = useState<{ type: string, active: boolean }>({ type: 'none', active: false });
+  const [monsterCasting, setMonsterCasting] = useState<{ id: string; name: string; turnsLeft: number; damage: number } | null>(null);
+  const [combatPlayerDebuffs, setCombatPlayerDebuffs] = useState<{ id: string; name: string; type: 'poison' | 'stun' | 'bleed'; duration: number; value: number }[]>([]);
+  const [monsterShroudActive, setMonsterShroudActive] = useState<boolean>(false);
   const isDodgingRef = useRef<boolean>(false);
 
   // 2D Top-down Game States
@@ -619,6 +710,16 @@ export default function App() {
   const MAP_ROWS = 11;
   const [playerX, setPlayerX] = useState<number>(3);
   const [playerY, setPlayerY] = useState<number>(3);
+  const playerXRef = useRef<number>(3);
+  const playerYRef = useRef<number>(3);
+
+  useEffect(() => {
+    playerXRef.current = playerX;
+  }, [playerX]);
+
+  useEffect(() => {
+    playerYRef.current = playerY;
+  }, [playerY]);
   const [mapEntities, setMapEntities] = useState<MapEntity[]>([]);
   const [combatVisualEvent, setCombatVisualEvent] = useState<{ id: number; type: 'melee' | 'taunt' | 'fire' | 'heal' | 'ice' | 'buff' | 'monster'; label: string; amount?: number } | null>(null);
 
@@ -829,19 +930,173 @@ export default function App() {
     return () => unsub();
   }, [user]);
 
+  // Synchronization helper references to prevent initialization racing or loops
+  const lastLoadedCharNameRef = useRef<string | null>(null);
+
+  // Load character-specific guild/party/other states from Firestore Character document on select/load
+  useEffect(() => {
+    if (character) {
+      if (lastLoadedCharNameRef.current !== character.name) {
+        lastLoadedCharNameRef.current = character.name;
+        // This is a fresh character load! Populate all states from the character data
+        setGuild((character as any).guild || null);
+        setParty((character as any).party || null);
+        setGuildUpgrades((character as any).guildUpgrades || { guildHall: 1, forge: 1, lab: 1, altar: 1 });
+        setGuildResources((character as any).guildResources || { ore: 20, wood: 20, herbs: 20 });
+        setBotDuties((character as any).botDuties || { 'Fippy': 'ore', 'Firiona_Vie': 'wood', 'AlKabor': 'herbs' });
+        setCastles((character as any).castles || [
+          { id: 'freeport', name: 'Крепость Фрипорта', defender: 'Синдикат Теней', level: 1, income: 50, lastCollected: 0 },
+          { id: 'highpass', name: 'Высший Перевал', defender: 'Рыцари Стальной Вечности', level: 1, income: 80, lastCollected: 0 },
+          { id: 'cabilis', name: 'Замок Кабилис', defender: 'Песчаный Легион', level: 1, income: 120, lastCollected: 0 }
+        ]);
+        setRivalGuilds((character as any).rivalGuilds || [
+          { id: 'shadow', name: 'Синдикат Теней', level: 4, honor: 1600 },
+          { id: 'knights', name: 'Рыцари Стальной Вечности', level: 3, honor: 1200 },
+          { id: 'sand', name: 'Песчаный Легион', level: 5, honor: 900 }
+        ]);
+        setGuildHonor((character as any).guildHonor || 550);
+
+        const savedZoneId = (character as any).activeZoneId;
+        if (savedZoneId) {
+          const z = GAME_ZONES.find(x => x.id === savedZoneId);
+          if (z) setActiveZone(z);
+        }
+        setPlayerX((character as any).playerX !== undefined ? (character as any).playerX : 3);
+        setPlayerY((character as any).playerY !== undefined ? (character as any).playerY : 3);
+      }
+    } else {
+      if (lastLoadedCharNameRef.current !== null) {
+        lastLoadedCharNameRef.current = null;
+        setGuild(null);
+        setParty(null);
+        setGuildUpgrades({ guildHall: 1, forge: 1, lab: 1, altar: 1 });
+        setGuildResources({ ore: 20, wood: 20, herbs: 20 });
+        setBotDuties({ 'Fippy': 'ore', 'Firiona_Vie': 'wood', 'AlKabor': 'herbs' });
+        setCastles([
+          { id: 'freeport', name: 'Крепость Фрипорта', defender: 'Синдикат Теней', level: 1, income: 50, lastCollected: 0 },
+          { id: 'highpass', name: 'Высший Перевал', defender: 'Рыцари Стальной Вечности', level: 1, income: 80, lastCollected: 0 },
+          { id: 'cabilis', name: 'Замок Кабилис', defender: 'Песчаный Легион', level: 1, income: 120, lastCollected: 0 }
+        ]);
+        setRivalGuilds([
+          { id: 'shadow', name: 'Синдикат Теней', level: 4, honor: 1600 },
+          { id: 'knights', name: 'Рыцари Стальной Вечности', level: 3, honor: 1200 },
+          { id: 'sand', name: 'Песчаный Легион', level: 5, honor: 900 }
+        ]);
+        setGuildHonor(550);
+      }
+    }
+  }, [character]);
+
+  // Sync state modifications back into the active Character document in Firestore
+  useEffect(() => {
+    if (!user || !character) return;
+    
+    const hasDiff = 
+      JSON.stringify((character as any).guild || null) !== JSON.stringify(guild) ||
+      JSON.stringify((character as any).party || null) !== JSON.stringify(party) ||
+      JSON.stringify((character as any).guildUpgrades || { guildHall: 1, forge: 1, lab: 1, altar: 1 }) !== JSON.stringify(guildUpgrades) ||
+      JSON.stringify((character as any).guildResources || { ore: 20, wood: 20, herbs: 20 }) !== JSON.stringify(guildResources) ||
+      JSON.stringify((character as any).botDuties || { 'Fippy': 'ore', 'Firiona_Vie': 'wood', 'AlKabor': 'herbs' }) !== JSON.stringify(botDuties) ||
+      JSON.stringify((character as any).castles || null) !== JSON.stringify(castles) ||
+      JSON.stringify((character as any).rivalGuilds || null) !== JSON.stringify(rivalGuilds) ||
+      (character as any).guildHonor !== guildHonor;
+
+    if (hasDiff) {
+      const updatedChar = {
+        ...character,
+        guild,
+        party,
+        guildUpgrades,
+        guildResources,
+        botDuties,
+        castles,
+        rivalGuilds,
+        guildHonor
+      };
+      saveCharacter(updatedChar);
+    }
+  }, [guild, party, guildUpgrades, guildResources, botDuties, castles, rivalGuilds, guildHonor]);
+
+  // Sync player's 2D map position to Firestore so other players can see them
+  useEffect(() => {
+    if (!character || !user) return;
+    
+    // Check if the current cached values in Firestore character already match
+    if (
+      (character as any).playerX === playerX &&
+      (character as any).playerY === playerY &&
+      (character as any).activeZoneId === activeZone.id &&
+      (character as any).lastActive && (Date.now() - (character as any).lastActive < 10000)
+    ) {
+      return;
+    }
+
+    const updatedChar = {
+      ...character,
+      playerX,
+      playerY,
+      activeZoneId: activeZone.id,
+      lastActive: Date.now()
+    };
+    saveCharacter(updatedChar);
+  }, [playerX, playerY, activeZone.id, !!character, !!user]);
+
+  // Subscribe to other players in the same zone
+  useEffect(() => {
+    if (!character || !user) {
+      setOnlinePlayers([]);
+      return;
+    }
+
+    // Subscribe to characters in the same zone
+    const q = query(
+      collection(db, 'characters'),
+      where('activeZoneId', '==', activeZone.id)
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const players = snapshot.docs
+        .map(d => d.data())
+        .filter(p => p.name !== character.name && p.lastActive && (Date.now() - p.lastActive < 300000)); // 5 minutes timeout
+      setOnlinePlayers(players);
+    }, (error) => {
+      console.error("Error fetching online players:", error);
+    });
+
+    return () => unsub();
+  }, [activeZone.id, character?.name, !!user]);
+
   // Save character utility
   const saveCharacter = async (char: PlayerCharacter) => {
     if (!user) return;
     const enriched = ensureCharacterFields(char);
     setCharacter(enriched);
     
+    // Safely remove any properties with undefined values recursively to avoid Firestore formatting issues
+    const sanitizeForFirestore = (obj: any): any => {
+      if (obj === null || typeof obj !== 'object') {
+        return obj;
+      }
+      if (Array.isArray(obj)) {
+        return obj.map(sanitizeForFirestore);
+      }
+      const cleaned: any = {};
+      Object.keys(obj).forEach((key) => {
+        const value = obj[key];
+        if (value !== undefined) {
+          cleaned[key] = sanitizeForFirestore(value);
+        }
+      });
+      return cleaned;
+    };
+
     // Convert to plain object for firestore
-    const toSave = {
+    const toSave = sanitizeForFirestore({
       ...enriched,
       userId: user.uid,
       createdAt: (enriched as any).createdAt || Date.now(),
       updatedAt: Date.now()
-    };
+    });
     
     try {
         await setDoc(doc(db, 'characters', enriched.name), toSave);
@@ -1348,132 +1603,147 @@ export default function App() {
     init2DMap(activeZone.id);
   }, [activeZone.id, !character]);
 
-  useEffect(() => {
-    if (!character || inCombat) return;
-
-    const interval = setInterval(() => {
-      setMapEntities((prevEntities) => {
-        return prevEntities.map((entity) => {
-          if (entity.type !== 'monster' && entity.type !== 'bot') return entity;
-          
-          // AI: Получение информации -> Анализ -> Действие (Information -> Analysis -> Action)
-          const isBot = entity.type === 'bot';
-          
-          // 1. ПОЛУЧЕНИЕ ИНФОРМАЦИИ (Sensor phase)
-          // Сканируем окружение: ищем ближайших противников и объекты
-          const mapTargets = prevEntities.filter(e => {
-            if (e.id === entity.id) return false;
-            if (isBot) return e.type === 'monster' || e.type === 'campfire';
-            else return e.type === 'bot';
-          });
-
-          let nearestTarget: any = null;
-          let minDist = Infinity;
-
-          mapTargets.forEach(t => {
-            const dist = Math.abs(t.x - entity.x) + Math.abs(t.y - entity.y);
-            if (dist < minDist) {
-              minDist = dist;
-              nearestTarget = t;
-            }
-          });
-
-          // 2. АНАЛИЗ (Decision phase / AI State)
-          // Определение контекста и намерений (Intention)
-          let intent: 'wander' | 'attack' | 'flee' | 'rest' = 'wander';
-          let chatQueue: string | null = null;
-          let targetDx = 0;
-          let targetDy = 0;
-
-          if (nearestTarget && minDist < 6) {
-            if (isBot) {
-              if (nearestTarget.type === 'monster') {
-                intent = (entity.hp && entity.hp < 30) ? 'flee' : 'attack';
-                if (intent === 'flee' && minDist < 3 && Math.random() > 0.7) {
-                  chatQueue = `Помогите! Рядом с координатами [${entity.x}, ${entity.y}] злой монстр, а у меня мало ХП!`;
-                } else if (intent === 'attack' && minDist < 3 && Math.random() > 0.85) {
-                  chatQueue = `Атакую монстра ${nearestTarget.name}! За Норрат!`;
-                }
-              } else if (nearestTarget.type === 'campfire') {
-                intent = (entity.hp && entity.hp < 80) ? 'rest' : 'wander';
-                if (intent === 'rest' && minDist === 1 && Math.random() > 0.9) {
-                  chatQueue = "Отдыхаю у костра, восстанавливаю силы...";
-                }
-              }
-            } else {
-               // У монстров простое поведение - преследование ботов
-               intent = 'attack';
-            }
-          }
-
-          // 3. ДЕЙСТВИЕ (Action phase)
-          // Если ИИ "соображает" (0.7 шанс, иначе тупит/ждет)
-          if (Math.random() > 0.3) {
-            if (intent === 'attack' && nearestTarget) {
-              targetDx = Math.sign(nearestTarget.x - entity.x);
-              targetDy = Math.sign(nearestTarget.y - entity.y);
-            } else if (intent === 'flee' && nearestTarget) {
-              targetDx = -Math.sign(nearestTarget.x - entity.x);
-              targetDy = -Math.sign(nearestTarget.y - entity.y);
-            } else if (intent === 'rest' && nearestTarget) {
-               targetDx = Math.sign(nearestTarget.x - entity.x);
-               targetDy = Math.sign(nearestTarget.y - entity.y);
-            }
-
-            // Оставляем движение по одной из осей, чтобы не ходить по диагонали (сетка)
-            if (targetDx !== 0 && targetDy !== 0) {
-              if (Math.random() > 0.5) targetDx = 0; else targetDy = 0;
-            }
-
-            // Случайное блуждание, если нет цели
-            if (targetDx === 0 && targetDy === 0) {
-              const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
-              const rDir = dirs[Math.floor(Math.random() * dirs.length)];
-              targetDx = rDir.dx;
-              targetDy = rDir.dy;
-            }
-
-            const nx = entity.x + targetDx;
-            const ny = entity.y + targetDy;
-
-            if (!isObstacle(nx, ny, activeZone.id) && nx > 0 && nx < MAP_COLS - 1 && ny > 0 && ny < MAP_ROWS - 1) {
-              const collision = prevEntities.some(e => e.id !== entity.id && e.x === nx && e.y === ny);
-              if (!collision) {
-                // Если мы планируем что-то сказать в чат (контекстно)
-                if (isBot) {
-                  const shouldChatIdle = Math.random() > 0.95;
-                  if (chatQueue || shouldChatIdle) {
-                    const line = chatQueue || [
-                      'Интересно, как устроен этот мир. Вижу логику ИИ.',
-                      `Где находится босс зоны ${activeZone.name}?`,
-                      'Деревья здесь словно процедурно сгенерированы.',
-                      'Кто-нибудь продает зелья маны?',
-                      'Ищу пати для быстрого фарма! (На самом деле я бот)'
-                    ][Math.floor(Math.random() * 5)];
-                    
-                    setChatMessages(prev => [
-                      ...prev,
-                      {
-                        id: `bot-chat-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-                        sender: entity.name,
-                        channel: 'OOC' as const,
-                        text: line,
-                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      }
-                    ].slice(-40));
-                  }
-                }
-                return { ...entity, x: nx, y: ny };
-              }
-            }
-          }
-          return entity;
+  const tickMapEntities = (px: number, py: number) => {
+    setMapEntities((prevEntities) => {
+      return prevEntities.map((entity) => {
+        if (entity.type !== 'monster' && entity.type !== 'bot') return entity;
+        
+        const isBot = entity.type === 'bot';
+        
+        // 1. ПОЛУЧЕНИЕ ИНФОРМАЦИИ (Sensor phase)
+        const mapTargets = prevEntities.filter(e => {
+          if (e.id === entity.id) return false;
+          if (isBot) return e.type === 'monster' || e.type === 'campfire';
+          else return e.type === 'bot';
         });
-      });
-    }, 1800);
 
-    return () => clearInterval(interval);
-  }, [activeZone.id, inCombat, !character]);
+        // Для монстра главной целью также является сам ИГРОК
+        if (!isBot && character) {
+          mapTargets.push({
+            id: 'main-player-target',
+            type: 'bot',
+            name: character.name,
+            x: px,
+            y: py,
+            level: character.level,
+          } as any);
+        }
+
+        let nearestTarget: any = null;
+        let minDist = Infinity;
+
+        mapTargets.forEach(t => {
+          const dist = Math.abs(t.x - entity.x) + Math.abs(t.y - entity.y);
+          if (dist < minDist) {
+            minDist = dist;
+            nearestTarget = t;
+          }
+        });
+
+        // 2. АНАЛИЗ (Decision phase)
+        let intent: 'wander' | 'attack' | 'flee' | 'rest' = 'wander';
+        let chatQueue: string | null = null;
+        let targetDx = 0;
+        let targetDy = 0;
+
+        if (nearestTarget && minDist < 6) {
+          if (isBot) {
+            if (nearestTarget.type === 'monster') {
+              intent = (entity.hp && entity.hp < 30) ? 'flee' : 'attack';
+              if (intent === 'flee' && minDist < 3 && Math.random() > 0.7) {
+                chatQueue = `Помогите! Рядом с координатами [${entity.x}, ${entity.y}] злой монстр, а у меня мало ХП!`;
+              } else if (intent === 'attack' && minDist < 3 && Math.random() > 0.85) {
+                chatQueue = `Атакую монстра ${nearestTarget.name}! За Норрат!`;
+              }
+            } else if (nearestTarget.type === 'campfire') {
+              intent = (entity.hp && entity.hp < 80) ? 'rest' : 'wander';
+              if (intent === 'rest' && minDist === 1 && Math.random() > 0.9) {
+                chatQueue = "Отдыхаю у костра, восстанавливаю силы...";
+              }
+            }
+          } else {
+             intent = 'attack';
+          }
+        }
+
+        // 3. ДЕЙСТВИЕ (Action phase)
+        if (Math.random() > 0.25) {
+          if (intent === 'attack' && nearestTarget) {
+            targetDx = Math.sign(nearestTarget.x - entity.x);
+            targetDy = Math.sign(nearestTarget.y - entity.y);
+          } else if (intent === 'flee' && nearestTarget) {
+            targetDx = -Math.sign(nearestTarget.x - entity.x);
+            targetDy = -Math.sign(nearestTarget.y - entity.y);
+          } else if (intent === 'rest' && nearestTarget) {
+             targetDx = Math.sign(nearestTarget.x - entity.x);
+             targetDy = Math.sign(nearestTarget.y - entity.y);
+          }
+
+          if (targetDx !== 0 && targetDy !== 0) {
+            if (Math.random() > 0.5) targetDx = 0; else targetDy = 0;
+          }
+
+          if (targetDx === 0 && targetDy === 0) {
+            const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+            const rDir = dirs[Math.floor(Math.random() * dirs.length)];
+            targetDx = rDir.dx;
+            targetDy = rDir.dy;
+          }
+
+          const nx = entity.x + targetDx;
+          const ny = entity.y + targetDy;
+
+          if (!isObstacle(nx, ny, activeZone.id) && nx > 0 && nx < MAP_COLS - 1 && ny > 0 && ny < MAP_ROWS - 1) {
+            const collision = prevEntities.some(e => e.id !== entity.id && e.x === nx && e.y === ny);
+            const playerHit = !isBot && nx === px && ny === py;
+
+            if (playerHit) {
+              // Если мы настигаем игрока на карте, совершаем нападение
+              setTimeout(() => {
+                handleInitiateCombat({
+                  name: entity.name,
+                  level: entity.level || 1,
+                  hp: entity.hp || 50,
+                  isBoss: entity.isBoss
+                });
+                triggerAlert(`⚔️ ВНЕЗАПНАЯ ЗАСАДА! Монстр ${entity.name} (ур. ${entity.level || 1}) настиг вас! Приготовьтесь к бою!`, 'error');
+              }, 100);
+              return { ...entity, x: nx, y: ny };
+            }
+
+            if (!collision) {
+              // Если мы планируем что-то сказать в чат (контекстно)
+              if (isBot) {
+                const shouldChatIdle = Math.random() > 0.95;
+                if (chatQueue || shouldChatIdle) {
+                  const line = chatQueue || [
+                    'Интересно, как устроен этот мир. Вижу логику ИИ.',
+                    `Где находится босс зоны ${activeZone.name}?`,
+                    'Деревья здесь словно процедурно сгенерированы.',
+                    'Кто-нибудь продает зелья маны?',
+                    'Ищу пати для быстрого фарма! (На самом деле я бот)'
+                  ][Math.floor(Math.random() * 5)];
+                  
+                  setChatMessages(prev => [
+                    ...prev,
+                    {
+                      id: `bot-chat-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                      sender: entity.name,
+                      channel: 'OOC' as const,
+                      text: line,
+                      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    }
+                  ].slice(-40));
+                }
+              }
+              return { ...entity, x: nx, y: ny };
+            }
+          }
+        }
+        return entity;
+      });
+    });
+  };
 
   const handlePlayerMove = (dx: number, dy: number) => {
     if (!character || inCombat) return;
@@ -1486,6 +1756,10 @@ export default function App() {
 
     setPlayerX(nx);
     setPlayerY(ny);
+    triggerHaptic.light();
+
+    // Монстры и боты делают свой ход только тогда, когда походил персонаж (пошагово)
+    tickMapEntities(nx, ny);
 
     // Collisions
     const portal = mapEntities.find(e => e.type === 'portal' && e.x === nx && e.y === ny);
@@ -1854,6 +2128,282 @@ export default function App() {
     triggerAlert('Задание отменено.', 'info');
   };
 
+  // --- MSQ (Main Scenario Quest) Interactive Flow System ---
+  const getItemByTemplateId = (itemId: string): Item | undefined => {
+    // @ts-ignore
+    const found = COMMON_TEMPLATES.merchantItems?.find(i => i.id === itemId);
+    if (found) {
+       return { ...found, id: `${itemId}-${Date.now()}` };
+    }
+    // @ts-ignore
+    const foundMat = COMMON_TEMPLATES.materials?.find(i => i.id === itemId);
+    if (foundMat) {
+       return { ...foundMat, id: `${itemId}-${Date.now()}` };
+    }
+    
+    // Custom iconic epic and legendary items supporting high-end gameplay
+    if (itemId === 'leg-tfury') {
+       return {
+         id: `leg-tfury-${Date.now()}`,
+         name: 'Громовая Ярость, Благословенный Клинок Искателя Ветра',
+         slot: 'primary',
+         description: 'Легендарное клинковое оружие, искрящееся элементальной силой ветра.',
+         price: 10000,
+         rarity: 'epic',
+         stats: { str: 25, agi: 25, sta: 30, hp: 120 }
+       };
+    }
+    if (itemId === 'leg-atiesh') {
+       return {
+         id: `leg-atiesh-${Date.now()}`,
+         name: 'Атиеш, Великий Посох Стража',
+         slot: 'primary',
+         description: 'Древний посох, впитавший силу сотен арканических Кристаллов Баланса.',
+         price: 11000,
+         rarity: 'epic',
+         stats: { int: 35, wis: 35, sta: 25, mana: 150 }
+       };
+    }
+    if (itemId === 'res-rune-fate') {
+       return {
+         id: `res-rune-fate-${Date.now()}`,
+         name: 'Печать Судьбы: Звездный Резонатор',
+         slot: 'rune',
+         description: 'Драгоценный сплав всех Кристаллов баланса, соединяющий стихии.',
+         price: 5000,
+         rarity: 'rare',
+         stats: { int: 10, wis: 10, str: 10, agi: 10, sta: 10, hp: 50, mana: 50 }
+       };
+    }
+    if (itemId === 'epic-acc-ring') {
+       return {
+         id: `epic-acc-ring-${Date.now()}`,
+         name: 'Печатка Изумрудного Леса',
+         slot: 'ring1',
+         description: 'Древнее кольцо друидов, дарующее гармонию с природой.',
+         price: 1500,
+         rarity: 'rare',
+         stats: { wis: 12, sta: 8, hp: 40 }
+       };
+    }
+    if (itemId === 'epic-acc-neck') {
+       return {
+         id: `epic-acc-neck-${Date.now()}`,
+         name: 'Амулет Сердца Леса',
+         slot: 'amulet',
+         description: 'Благословен друидскими молитвами под Древом Жизни.',
+         price: 2000,
+         rarity: 'rare',
+         stats: { wis: 15, sta: 10, hp: 50, mana: 50 }
+       };
+    }
+    if (itemId === 'epic-ch-crown') {
+       return {
+         id: `epic-ch-crown-${Date.now()}`,
+         name: 'Корона Хранителя Пепла',
+         slot: 'head',
+         description: 'Шлем древней кузни гномов, выкованный в недрах Ледяных Пиков.',
+         price: 3000,
+         rarity: 'rare',
+         stats: { str: 20, sta: 20, ac: 25 }
+       };
+    }
+
+    return {
+      id: `custom-reward-${Date.now()}`,
+      name: 'Этерийская Эссенция Силы',
+      slot: 'rune',
+      description: 'Магическая реликвия, сияющая золотым светом Этернии.',
+      price: 500,
+      rarity: 'rare',
+      stats: { sta: 5, hp: 20 }
+    };
+  };
+
+  const handleCompleteMsqStage = (stage: any, overriddenCharacter?: PlayerCharacter) => {
+    const activeChar = overriddenCharacter || character;
+    if (!activeChar) return;
+
+    const addExp = stage.rewards.exp;
+    const addGold = stage.rewards.gold;
+
+    let currentExp = activeChar.exp + addExp;
+    let level = activeChar.level;
+    let nextThreshold = activeChar.expToNextLevel;
+    let leveledUp = false;
+
+    if (currentExp >= nextThreshold) {
+      level += 1;
+      currentExp = currentExp - nextThreshold;
+      nextThreshold = level * 1200;
+      leveledUp = true;
+    }
+
+    const updatedInventory = [...(activeChar.inventory || [])];
+    let rewardedItem: Item | undefined = undefined;
+    if (stage.rewards.item) {
+       rewardedItem = getItemByTemplateId(stage.rewards.item);
+       if (rewardedItem) {
+         updatedInventory.push(rewardedItem);
+       }
+    }
+
+    const currentQuestIndex = MAIN_SCENARIO_QUESTS.findIndex((q: any) => q.id === stage.id);
+    let nextProgress = { chapter: stage.chapter, stage: stage.stage, completed: true };
+
+    if (currentQuestIndex !== -1 && currentQuestIndex < MAIN_SCENARIO_QUESTS.length - 1) {
+       const nextQuest = MAIN_SCENARIO_QUESTS[currentQuestIndex + 1];
+       nextProgress = { chapter: nextQuest.chapter, stage: nextQuest.stage, completed: false };
+    }
+
+    const updatedChar = {
+      ...activeChar,
+      level,
+      exp: currentExp,
+      expToNextLevel: nextThreshold,
+      gold: activeChar.gold + addGold,
+      inventory: updatedInventory,
+      msqProgress: nextProgress
+    };
+
+    saveCharacter(updatedChar);
+
+    triggerAlert(`Сюжетное задание завершено: "${stage.title}"! Получено: ${addGold}g, +${addExp} XP!`, 'success');
+    if (rewardedItem) {
+       triggerAlert(`Награда добавлена в инвентарь: [${rewardedItem.name}]!`, 'success');
+    }
+
+    if (leveledUp) {
+      setPendingLevelUp(level);
+    }
+
+    setActiveNpcDialog(null);
+    setIsMsqExploring(false);
+    setActiveMsqCombatId(null);
+    setMsqKillCount(0);
+  };
+
+  const handleStartMsqStage = (stage: any) => {
+    if (!character) return;
+
+    if (stage.type === 'dialogue') {
+      showMsqDialogueLine(stage, 0);
+    } 
+    else if (stage.type === 'combat') {
+      triggerAlert(`Подготовка к сюжетному сражению с: ${stage.npcName || 'Противником'}...`, 'info');
+      setActiveMsqCombatId(stage.id);
+      
+      const monsterLvl = Math.max(character.level, stage.chapter * 4);
+      const isBoss = stage.npcName.toLowerCase().includes('босс') || stage.npcName.toLowerCase().includes('малакор') || stage.npcName.toLowerCase().includes('владыка');
+      
+      handleInitiateCombat({
+         name: stage.npcName || 'Темный культист',
+         level: monsterLvl,
+         hp: isBoss ? (400 + monsterLvl * 70) : (120 + monsterLvl * 40),
+         isBoss: isBoss
+      });
+    } 
+    else if (stage.type === 'exploration') {
+      if (isMsqExploring) return;
+      setIsMsqExploring(true);
+      setMsqExploreProgress(0);
+      setMsqExploreText('Подготовка экспедиции к поиску ключевого места...');
+      
+      const phrases = [
+        'Изучение древней карты окрестностей...',
+        'Прочесывание глубоких оврагов и курганов...',
+        'Поиск магических волн и скрытых знаков...',
+        'Обнаружение древней защитной печати...',
+        'Цель близка! Расчистка тайного прохода...'
+      ];
+      
+      let currentProgress = 0;
+      const interval = setInterval(() => {
+         currentProgress += 5;
+         setMsqExploreProgress(currentProgress);
+         
+         const pIndex = Math.min(Math.floor(currentProgress / 20), phrases.length - 1);
+         setMsqExploreText(phrases[pIndex]);
+
+         if (currentProgress >= 100) {
+            clearInterval(interval);
+            setTimeout(() => {
+               setActiveNpcDialog({
+                 npc: {
+                   id: 'msq-explorer-prompt',
+                   name: stage.npcName || 'Отголосок Судьбы',
+                   role: 'Исследования Судьбы',
+                   storyImportant: true
+                 },
+                 text: `Вы успешно исследовали местность "${stage.title}". Скрытые знаки расшифрованы и тропа вперед открыта!`,
+                 options: [
+                   {
+                     id: 'complete-explore',
+                     text: 'Принять заслуженные трофеи и продолжить путь',
+                     action: () => {
+                        handleCompleteMsqStage(stage);
+                     }
+                   }
+                 ]
+               });
+            }, 500);
+         }
+      }, 150);
+    }
+  };
+
+  const showMsqDialogueLine = (stage: any, lineIndex: number) => {
+    if (!stage.dialogueLines || stage.dialogueLines.length === 0) return;
+    
+    const line = stage.dialogueLines[lineIndex];
+    if (!line) return;
+    const isPlayer = line.speaker === 'Вы';
+    
+    let roleStr = 'Таинственный Собеседник';
+    if (stage.npcName === line.speaker) {
+       roleStr = 'Поручитель сюжета';
+    } else if (line.speaker === 'Верховный Маг Альдо') {
+       roleStr = 'Хранитель Знаний';
+    } else if (line.speaker === 'Верховный Друид Аланна') {
+       roleStr = 'Защитница Леса';
+    } else if (line.speaker === 'Гном-Кузнец Брокк') {
+       roleStr = 'Мастер Стали';
+    } else if (line.speaker === 'Оракул Света') {
+       roleStr = 'Вестник Вечности';
+    } else if (line.speaker === 'Посланник Элларион') {
+       roleStr = 'Посланник Эльфов';
+    }
+    
+    const options: { id: string; text: string; tone?: 'Respectful' | 'Rude' | 'Cunning' | 'Neutral'; action?: () => void }[] = [];
+    if (lineIndex < stage.dialogueLines.length - 1) {
+       options.push({
+          id: 'next-line',
+          text: 'Далее...',
+          tone: 'Neutral',
+          action: () => showMsqDialogueLine(stage, lineIndex + 1)
+       });
+    } else {
+       options.push({
+          id: 'complete-msq',
+          text: 'Завершить диалог',
+          tone: 'Respectful',
+          action: () => handleCompleteMsqStage(stage)
+       });
+    }
+
+    setActiveNpcDialog({
+       npc: {
+          id: `msq-npc-${stage.id}-${lineIndex}`,
+          name: line.speaker,
+          role: isPlayer ? 'Герой Этернии' : roleStr,
+          storyImportant: true,
+          emotion: isPlayer ? 'Happy' : 'Neutral'
+       },
+       text: line.text,
+       options: options
+    });
+  };
+
   // 5. Tome of Norrath Deep Lore Query via Gemini
   const handleSearchLore = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2098,6 +2648,9 @@ export default function App() {
     setVictoryDetails(null);
     setSpellCooldowns({});
     setComboField({ type: 'none', active: false });
+    setMonsterCasting(null);
+    setCombatPlayerDebuffs([]);
+    setMonsterShroudActive(false);
     setInCombat(true);
   };
 
@@ -2116,7 +2669,12 @@ export default function App() {
     let actionName = 'Melee attack';
 
     // Passive Stamina Regen
-    setStamina(prev => Math.min(100, prev + 15));
+    const isCurrentlyStunned = combatPlayerDebuffs.some(d => d.type === 'stun');
+    if (!isCurrentlyStunned) {
+      setStamina(prev => Math.min(100, prev + 15));
+    } else {
+      logChunk.push(`[SYSTEM] Ваша выносливость не восстанавливается из-за Оглушения!`);
+    }
 
     // Decrement buff durations and filter out expired ones
     let updatedBuffs = activeBuffs
@@ -2250,6 +2808,13 @@ export default function App() {
       }
     }
 
+    // Apply shroud evasion
+    if (monsterShroudActive && dmgToMonster > 0) {
+      dmgToMonster = 0;
+      setMonsterShroudActive(false);
+      logChunk.push(`[SYSTEM] ${combatMonster.name} полностью уклонился от вашей атаки, выйдя из состояния маскировки [Исчезновение]!`);
+    }
+
     // Apply player action effects to target
     let activeMonsterHp = Math.max(0, combatMonster.hp - dmgToMonster);
     
@@ -2380,46 +2945,281 @@ export default function App() {
     // Save updated buffs state
     setActiveBuffs(updatedBuffs);
 
-    // C. Monster Retaliates
+    // C. Process Active Player Debuffs & Monster Action Selection
     let activePlayerHp = character.hp;
-    if (activeMonsterHp > 0) {
-      // Monster selects target
-      const targetSelf = Math.random() > 0.3 || actionType === 'taunt';
-      const monsterStr = combatMonster.level * 6 + 10;
-      const monsterHit = Math.max(2, Math.floor(Math.random() * monsterStr) + 5);
+    let isPlayerStunned = false;
+    let nextDebuffs = combatPlayerDebuffs.map(d => {
+      if (d.type === 'poison' || d.type === 'bleed') {
+        const dmgValue = d.value;
+        activePlayerHp = Math.max(0, activePlayerHp - dmgValue);
+        logChunk.push(`[SYSTEM] Вы теряете ${dmgValue} ед. здоровья от эффекта [${d.name}]!`);
+      } else if (d.type === 'stun') {
+        isPlayerStunned = true;
+        logChunk.push(`[SYSTEM] Вы оглушены эффектом [${d.name}]! Скорость накопления маны и стамины временно на нуле!`);
+      }
+      return { ...d, duration: d.duration - 1 };
+    }).filter(d => d.duration > 0);
+    setCombatPlayerDebuffs(nextDebuffs);
 
-      if (targetSelf) {
-        if (isDodgingRef.current) {
-          logChunk.push(`[SYSTEM] ${combatMonster.name} lunges at you, but you ROLL away! (Dodge Successful)`);
-        } else {
-          const ac = character.equipment.chest?.stats.ac || 0;
-          const reducedHit = Math.max(1, monsterHit - Math.floor(ac / 4));
-          activePlayerHp = Math.max(0, character.hp - reducedHit);
-          logChunk.push(`[WARNING] ${combatMonster.name} bites you brutally for ${reducedHit} damage! (AC blocked ${monsterHit - reducedHit})`);
-          
-          setTimeout(() => {
-            setCombatVisualEvent({
-              id: Date.now() + 10,
-              type: 'monster',
-              label: combatMonster.name,
-              amount: reducedHit,
-            });
-          }, 350);
+    if (activeMonsterHp > 0) {
+      const isBoss = combatMonster.isBoss || combatMonster.name.toLowerCase().includes('малакор') || combatMonster.name.toLowerCase().includes('босс') || combatMonster.name.toLowerCase().includes('владыка') || combatMonster.name.toLowerCase().includes('lord') || combatMonster.name.toLowerCase().includes('boss');
+      const isShaman = combatMonster.name.toLowerCase().includes('шаман') || combatMonster.name.toLowerCase().includes('культист') || combatMonster.name.toLowerCase().includes('маг') || combatMonster.name.toLowerCase().includes('shaman') || combatMonster.name.toLowerCase().includes('mage') || combatMonster.name.toLowerCase().includes('ведьма');
+      const isStalker = combatMonster.name.toLowerCase().includes('разбойник') || combatMonster.name.toLowerCase().includes('убийца') || combatMonster.name.toLowerCase().includes('сталкер') || combatMonster.name.toLowerCase().includes('кобра') || combatMonster.name.toLowerCase().includes('assassin') || combatMonster.name.toLowerCase().includes('rogue');
+      const isWarlord = combatMonster.name.toLowerCase().includes('вождь') || combatMonster.name.toLowerCase().includes('великан') || combatMonster.name.toLowerCase().includes('гигант') || combatMonster.name.toLowerCase().includes('chief') || combatMonster.name.toLowerCase().includes('bruiser') || combatMonster.name.toLowerCase().includes('ogre');
+
+      // Helper for normal strikes
+      const executeNormalMonsterHit = (monsterHit: number) => {
+        const targetSelf = Math.random() > 0.3 || actionType === 'taunt';
+        if (targetSelf) {
+          if (isDodgingRef.current) {
+            logChunk.push(`[SYSTEM] ${combatMonster.name} делает выпад в вашу сторону, но вы откатываетесь в сторону! (Успешное Уклонение)`);
+          } else {
+            const ac = character.equipment.chest?.stats.ac || 0;
+            const reducedHit = Math.max(1, monsterHit - Math.floor(ac / 4));
+            activePlayerHp = Math.max(0, activePlayerHp - reducedHit);
+            logChunk.push(`[WARNING] ${combatMonster.name} бьет вас на ${reducedHit} физического урона! (Защита брони заблокировала ${monsterHit - reducedHit})`);
+            
+            setTimeout(() => {
+              setCombatVisualEvent({
+                id: Date.now() + 10,
+                type: 'monster',
+                label: combatMonster.name,
+                amount: reducedHit,
+              });
+            }, 350);
+          }
+        } else if (activeParty.length > 0) {
+          const idx = Math.floor(Math.random() * activeParty.length);
+          if (activeParty[idx].hp > 0) {
+            activeParty[idx].hp = Math.max(0, activeParty[idx].hp - monsterHit);
+            logChunk.push(`[PARTY] ${combatMonster.name} разворачивается и атакует ${activeParty[idx].name}, нанося ему ${monsterHit} урона.`);
+            
+            setTimeout(() => {
+              setCombatVisualEvent({
+                id: Date.now() + 12,
+                type: 'monster',
+                label: combatMonster.name,
+                amount: monsterHit,
+              });
+            }, 350);
+          }
         }
-      } else if (activeParty.length > 0) {
-        const idx = Math.floor(Math.random() * activeParty.length);
-        if (activeParty[idx].hp > 0) {
-          activeParty[idx].hp = Math.max(0, activeParty[idx].hp - monsterHit);
-          logChunk.push(`[PARTY] ${combatMonster.name} swings around and hits ${activeParty[idx].name} for ${monsterHit} damage.`);
+      };
+
+      // 1. Resolve Active Casts
+      if (monsterCasting) {
+        if (monsterCasting.turnsLeft <= 1) {
+          // Unleash Cast!
+          const targetSelf = Math.random() > 0.3 || actionType === 'taunt';
+          const spellDamage = monsterCasting.damage;
           
-          setTimeout(() => {
-            setCombatVisualEvent({
-              id: Date.now() + 12,
-              type: 'monster',
-              label: combatMonster.name,
-              amount: monsterHit,
+          if (targetSelf) {
+            if (isDodgingRef.current) {
+              logChunk.push(`[SYSTEM] ${combatMonster.name} высвобождает сокрушительное заклинание [${monsterCasting.name}], но вы вовремя отскакиваете! (Уклонение)`);
+            } else {
+              const ac = character.equipment.chest?.stats.ac || 0;
+              const reducedDmg = Math.max(5, spellDamage - Math.floor(ac / 4));
+              activePlayerHp = Math.max(0, activePlayerHp - reducedDmg);
+              logChunk.push(`[WARNING] ⚡ КАТАСТРОФА! ${combatMonster.name} завершает чтение заклинания и обрушивает [${monsterCasting.name}] на вас! Нанесено ${reducedDmg} магического урона!`);
+              
+              setCombatVisualEvent({
+                id: Date.now() + 50,
+                type: 'monster',
+                label: monsterCasting.name,
+                amount: reducedDmg,
+              });
+            }
+          } else if (activeParty.length > 0) {
+            const idx = Math.floor(Math.random() * activeParty.length);
+            if (activeParty[idx].hp > 0) {
+              activeParty[idx].hp = Math.max(0, activeParty[idx].hp - spellDamage);
+              logChunk.push(`[PARTY] ⚡ ${combatMonster.name} завершает чтение заклинания и поражает [${monsterCasting.name}] союзника ${activeParty[idx].name} на ${spellDamage} урона!`);
+            }
+          }
+          setMonsterCasting(null);
+        } else {
+          // Keep charging
+          setMonsterCasting({ ...monsterCasting, turnsLeft: monsterCasting.turnsLeft - 1 });
+          logChunk.push(`[WARNING] Чтение заклинания: ${combatMonster.name} накапливает силы для нанесения [${monsterCasting.name}] на следующем ходу!`);
+        }
+      } 
+      // 2. Select Next Action
+      else {
+        const monsterRoll = Math.random();
+        
+        // A. BOSS INTERACTIVE AI
+        if (isBoss) {
+          if (monsterRoll < 0.35) {
+            // Charges ultimate Cataclysm
+            const finalDamage = Math.floor(combatMonster.level * 10 + 40);
+            setMonsterCasting({
+              id: `boss-ult-${Date.now()}`,
+              name: 'Катаклизм Сердца Крови',
+              turnsLeft: 2,
+              damage: finalDamage
             });
-          }, 350);
+            logChunk.push(`[WARNING] ☠️ ВНИМАНИЕ! РЕЙДОВЫЙ БОСС ${combatMonster.name} начинает призывать [Катаклизм Сердца Крови]! Через один ход по группе будет нанесен критический урон! Займите оборонительную стойку!`);
+          } else if (monsterRoll >= 0.35 && monsterRoll < 0.65) {
+            // Siphon life
+            const siphonDmg = Math.floor(combatMonster.level * 4 + 15);
+            const targetSelf = Math.random() > 0.3 || actionType === 'taunt';
+            
+            if (targetSelf) {
+              if (isDodgingRef.current) {
+                logChunk.push(`[SYSTEM] ${combatMonster.name} пытается похитить вашу жизнь заклинанием [Жатва Душ], но вы избегаете прикосновения.`);
+              } else {
+                activePlayerHp = Math.max(0, activePlayerHp - siphonDmg);
+                activeMonsterHp = Math.min(combatMonster.maxHp, activeMonsterHp + Math.floor(siphonDmg * 1.5));
+                logChunk.push(`[WARNING] 🩸 ${combatMonster.name} высасывает вашу жизненную искру умением [Жатва Душ]! Получено ${siphonDmg} ед. урона (босс восстановил своё здоровье).`);
+              }
+            } else if (activeParty.length > 0) {
+              const idx = Math.floor(Math.random() * activeParty.length);
+              if (activeParty[idx].hp > 0) {
+                activeParty[idx].hp = Math.max(0, activeParty[idx].hp - siphonDmg);
+                activeMonsterHp = Math.min(combatMonster.maxHp, activeMonsterHp + siphonDmg);
+                logChunk.push(`[PARTY] 🩸 ${combatMonster.name} пьет здоровье ${activeParty[idx].name} заклинанием [Жатва Душ] на ${siphonDmg} ед.`);
+              }
+            }
+          } else {
+            // Regular boss physical strike
+            const monsterStr = combatMonster.level * 7 + 12;
+            const monsterHit = Math.max(4, Math.floor(Math.random() * monsterStr) + 6);
+            executeNormalMonsterHit(monsterHit);
+          }
+        }
+        // B. SHAMAN / CASTER AI
+        else if (isShaman) {
+          if (monsterRoll < 0.35 && activeMonsterHp < combatMonster.maxHp * 0.45) {
+            // Self Regrowth Heal
+            const healVal = Math.floor(combatMonster.level * 5 + 25);
+            activeMonsterHp = Math.min(combatMonster.maxHp, activeMonsterHp + healVal);
+            logChunk.push(`[PARTY] 🌿 ${combatMonster.name} активирует целительную молитву [Восстановление], регенерируя +${healVal} здоровья!`);
+          } else if (monsterRoll >= 0.35 && monsterRoll < 0.70) {
+            // Fire burn
+            const burnDmg = Math.floor(combatMonster.level * 4 + 8);
+            const targetSelf = Math.random() > 0.3 || actionType === 'taunt';
+            
+            if (targetSelf) {
+              if (isDodgingRef.current) {
+                logChunk.push(`[SYSTEM] ${combatMonster.name} метает в вас огненный сгусток, но вы отпрыгиваете.`);
+              } else {
+                activePlayerHp = Math.max(0, activePlayerHp - burnDmg);
+                nextDebuffs.push({
+                  id: `burn-${Date.now()}`,
+                  name: 'Огненное Горение',
+                  type: 'bleed',
+                  duration: 3,
+                  value: Math.floor(combatMonster.level * 1.5 + 4)
+                });
+                setCombatPlayerDebuffs(nextDebuffs);
+                logChunk.push(`[WARNING] 🔥 Огненный снаряд ${combatMonster.name} поджигает ваше снаряжение! Нанесено ${burnDmg} ед. урона и наложен ожог на 3 хода.`);
+              }
+            } else if (activeParty.length > 0) {
+              const idx = Math.floor(Math.random() * activeParty.length);
+              activeParty[idx].hp = Math.max(0, activeParty[idx].hp - burnDmg);
+              logChunk.push(`[PARTY] 🔥 ${combatMonster.name} кидает огненный сгусток в ${activeParty[idx].name} на ${burnDmg} ед. урона!`);
+            }
+          } else {
+            // Standard action
+            const monsterHit = Math.max(2, Math.floor(Math.random() * (combatMonster.level * 4 + 5)) + 3);
+            executeNormalMonsterHit(monsterHit);
+          }
+        }
+        // C. STALKER / ASSASSIN AI
+        else if (isStalker) {
+          if (monsterRoll < 0.35) {
+            // Enter Stealth Shroud
+            setMonsterShroudActive(true);
+            logChunk.push(`[WARNING] 🔮 ${combatMonster.name} уходит перекатом назад и использует [Исчезновение]! Он растворился в тенях и гарантированно увернется от вашей следующей физической атаки!`);
+          } else if (monsterRoll >= 0.35 && monsterRoll < 0.70) {
+            // Venom strike
+            const venomDmg = Math.floor(combatMonster.level * 3 + 7);
+            const targetSelf = Math.random() > 0.3 || actionType === 'taunt';
+            
+            if (targetSelf) {
+              if (isDodgingRef.current) {
+                logChunk.push(`[SYSTEM] ${combatMonster.name} пытается ткнуть вас отравленным жалом, но вы блокируете клинок.`);
+              } else {
+                activePlayerHp = Math.max(0, activePlayerHp - venomDmg);
+                nextDebuffs.push({
+                  id: `poison-${Date.now()}`,
+                  name: 'Смертоносный Гадюкин Токсин',
+                  type: 'poison',
+                  duration: 3,
+                  value: Math.floor(combatMonster.level * 1.5 + 4)
+                });
+                setCombatPlayerDebuffs(nextDebuffs);
+                logChunk.push(`[WARNING] ☠️ Коварное ранение от ${combatMonster.name} отравляет вас! Нанесено ${venomDmg} ед. урона и наложен смертельный яд.`);
+              }
+            } else if (activeParty.length > 0) {
+              const idx = Math.floor(Math.random() * activeParty.length);
+              activeParty[idx].hp = Math.max(0, activeParty[idx].hp - venomDmg);
+              logChunk.push(`[PARTY] ☠️ ${combatMonster.name} скрытно ранит ${activeParty[idx].name} на ${venomDmg} ед. урона!`);
+            }
+          } else {
+            const monsterHit = Math.max(2, Math.floor(Math.random() * (combatMonster.level * 5 + 8)) + 4);
+            executeNormalMonsterHit(monsterHit);
+          }
+        }
+        // D. WARLORD / BRUISER AI
+        else if (isWarlord) {
+          if (monsterRoll < 0.35) {
+            // Concussive slam stun
+            const slamDmg = Math.floor(combatMonster.level * 3 + 10);
+            const targetSelf = Math.random() > 0.3 || actionType === 'taunt';
+            
+            if (targetSelf) {
+              if (isDodgingRef.current) {
+                logChunk.push(`[SYSTEM] ${combatMonster.name} замахивается дубиной для оглушения, но вы эффектно пригибаетесь.`);
+              } else {
+                activePlayerHp = Math.max(0, activePlayerHp - slamDmg);
+                nextDebuffs.push({
+                  id: `stun-${Date.now()}`,
+                  name: 'Оглушающий Топот Владыки',
+                  type: 'stun',
+                  duration: 1,
+                  value: 0
+                });
+                setCombatPlayerDebuffs(nextDebuffs);
+                logChunk.push(`[WARNING] 🌀 БАМ! ${combatMonster.name} сотрясает своды пещеры ударом! Вы получаете ${slamDmg} ед. урона и ОШЕЛОМЛЕНЫ на следующий ход.`);
+              }
+            } else if (activeParty.length > 0) {
+              const idx = Math.floor(Math.random() * activeParty.length);
+              activeParty[idx].hp = Math.max(0, activeParty[idx].hp - slamDmg);
+              logChunk.push(`[PARTY] 🌀 ${combatMonster.name} оглушает ${activeParty[idx].name} сокрушительным ударом ноги!`);
+            }
+          } else {
+            const monsterHit = Math.max(3, Math.floor(Math.random() * (combatMonster.level * 6 + 10)) + 5);
+            executeNormalMonsterHit(monsterHit);
+          }
+        }
+        // E. GENERIC MONSTER ACTIONS
+        else {
+          if (monsterRoll < 0.25) {
+            // Savage bite
+            const targetSelf = Math.random() > 0.3 || actionType === 'taunt';
+            if (targetSelf) {
+              if (isDodgingRef.current) {
+                logChunk.push(`[SYSTEM] Челюсти ${combatMonster.name} щелкают у вашего лица, но укус не достигает цели.`);
+              } else {
+                const savageDmg = Math.floor((combatMonster.level * 4 + 8) * 1.6);
+                const ac = character.equipment.chest?.stats.ac || 0;
+                const reducedSavage = Math.max(2, savageDmg - Math.floor(ac / 4));
+                activePlayerHp = Math.max(0, activePlayerHp - reducedSavage);
+                logChunk.push(`[WARNING] Дикий Укус! Челюсти ${combatMonster.name} глубоко ранят вас на ${reducedSavage} ед. урона!`);
+              }
+            } else if (activeParty.length > 0) {
+              const idx = Math.floor(Math.random() * activeParty.length);
+              const savageDmg = Math.floor((combatMonster.level * 4 + 8) * 1.4);
+              activeParty[idx].hp = Math.max(0, activeParty[idx].hp - savageDmg);
+              logChunk.push(`[PARTY] Дикий Укус! ${combatMonster.name} глубоко ранит ${activeParty[idx].name} на ${savageDmg} ед. урона.`);
+            }
+          } else {
+            // Standard generic fight
+            const monsterStr = combatMonster.level * 6 + 10;
+            const monsterHit = Math.max(2, Math.floor(Math.random() * monsterStr) + 5);
+            executeNormalMonsterHit(monsterHit);
+          }
         }
       }
     }
@@ -2475,6 +3275,12 @@ export default function App() {
     } else if (activePlayerHp <= 0) {
       handleCombatDefeat();
     } else {
+      // Haptic feedback during mid-combat turn
+      if (activePlayerHp < character.hp) {
+        triggerHaptic.warning();
+      } else if (dmgToMonster > 0) {
+        triggerHaptic.medium();
+      }
       // Apply and save updated player state (mana, hp changes) factoring in party buffs
       let finalManaRegen = Math.floor(character.stats.int / 12) + 2;
       let finalHpRegen = 0;
@@ -2490,6 +3296,11 @@ export default function App() {
         finalHpRegen += 6;
       }
 
+      if (isPlayerStunned) {
+        finalManaRegen = 0;
+        finalHpRegen = 0;
+      }
+
       const postRegenPlayerHp = Math.min(character.maxHp, activePlayerHp + finalHpRegen);
       const postRegenPlayerMana = Math.min(character.maxMana, character.mana + finalManaRegen);
 
@@ -2503,6 +3314,7 @@ export default function App() {
 
   const handleCombatVictory = (monster: typeof combatMonster) => {
     if (!character || !monster) return;
+    triggerHaptic.success();
 
     const baseExp = Math.floor((monster.level * 180 + Math.floor(Math.random() * 50)) * (serverStateSettings.multiplierXP || 1.0));
     const baseGold = Math.floor((monster.level * 8 + Math.floor(Math.random() * 8)) * (serverStateSettings.multiplierGold || 1.0));
@@ -2600,6 +3412,14 @@ export default function App() {
     });
 
     setCombatOver(true);
+    if (activeMsqCombatId) {
+      const activeStage = MAIN_SCENARIO_QUESTS.find((q: any) => q.id === activeMsqCombatId);
+      if (activeStage) {
+        setTimeout(() => {
+          handleCompleteMsqStage(activeStage, updatedChar);
+        }, 1500);
+      }
+    }
     if (monster.isBoss) {
        grantAchievement(`kill-boss-${monster.name.replace(/\s+/g, '-')}`, `Смерть Босса: ${monster.name}`, `Одержана великая победа над рейдовым боссом ${monster.name}. Барды слагают песни о вашей силе!`, '⚔️');
     }
@@ -2618,6 +3438,7 @@ export default function App() {
 
   const handleCombatDefeat = () => {
     if (!character) return;
+    triggerHaptic.error();
 
     // Classic Everquest death penalty! Lose 8% of EXP threshold
     const penalty = Math.floor(character.expToNextLevel * 0.08);
@@ -2697,6 +3518,9 @@ export default function App() {
   }
 
   if (user === null) {
+    if (authError) {
+      return <AuthErrorModal message={authError} onTryAgain={() => setAuthError('')} />;
+    }
     return (
       <LoginScreen onLoginSuccess={() => {}} />
     );
@@ -2872,6 +3696,45 @@ export default function App() {
             onClose={() => setActiveNpcDialog(null)}
          />
       )}
+
+      {isMsqExploring && (
+         <div className="fixed inset-0 z-[250] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md p-6 select-none animate-fade-in font-mono">
+            <div className="max-w-md w-full bg-slate-950 border border-amber-500/40 rounded-lg p-8 shadow-[0_0_50px_rgba(245,158,11,0.2)] text-center space-y-6 relative overflow-hidden">
+               {/* Decorative runic glyphs */}
+               <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-amber-500/30 to-amber-700/5"></div>
+               <div className="absolute top-0 right-0 w-2 h-full bg-gradient-to-b from-amber-500/30 to-amber-700/5"></div>
+
+               <div className="mx-auto w-20 h-20 rounded-full border border-amber-600/30 flex items-center justify-center bg-amber-950/20 text-4xl shadow-[inset_0_0_20px_rgba(245,158,11,0.1)]">
+                  🧭
+               </div>
+
+               <div className="space-y-2">
+                  <span className="text-[10px] text-amber-500 uppercase tracking-widest font-black">Исследование Этернии</span>
+                  <h3 className="font-serif text-lg font-black text-slate-200 text-center">Поиск путей Судьбы</h3>
+                  <p className="text-xs text-slate-400 italic font-serif leading-relaxed h-12 flex items-center justify-center px-4 text-center">
+                     {msqExploreText}
+                  </p>
+               </div>
+
+               <div className="space-y-1.5 pt-2 font-sans">
+                  <div className="flex justify-between text-[11px] text-slate-500">
+                     <span>Процесс исследования</span>
+                     <span className="text-amber-400 font-bold">{msqExploreProgress}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-slate-900 border border-slate-800 rounded overflow-hidden p-[1px]">
+                     <div 
+                        className="h-full rounded-sm bg-gradient-to-r from-amber-700 via-amber-500 to-yellow-400 shadow-[0_0_10px_rgba(245,158,11,0.5)] transition-all duration-150 animate-pulse" 
+                        style={{ width: `${msqExploreProgress}%` }}
+                      />
+                  </div>
+               </div>
+
+               <div className="text-[10px] text-slate-600 italic">
+                  Пожалуйста, подождите завершения экспедиции...
+               </div>
+            </div>
+         </div>
+      )}
       
       {/* Background World Effect */}
       <div 
@@ -2966,7 +3829,7 @@ export default function App() {
             <div className="p-5 space-y-4">
               <div className="text-xs text-slate-400 font-mono leading-relaxed bg-slate-950/50 p-3 rounded border border-slate-800">
                 <span className="text-amber-500 font-bold block mb-1">🔧 OPERATIONS REPORT</span>
-                This system guides connection assignments and clusters routing. Region us-west1 has been completely decommissioned and removed to avoid execution faults.
+                This system guides connection assignments and clusters routing.
               </div>
 
               {/* Regions Stack */}
@@ -2998,25 +3861,6 @@ export default function App() {
                     Standby
                   </span>
                 </div>
-
-                {/* US West - Purged */}
-                <div className="bg-red-950/10 border border-red-600/30 p-4 rounded-lg space-y-2">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-red-500 text-sm">🔴</span>
-                        <h4 className="font-sans font-bold text-red-400 text-sm line-through">US West (us-west1)</h4>
-                      </div>
-                      <p className="text-[11px] text-red-300 font-mono">Admission Denied • PURGED FROM REALM MANAGER</p>
-                    </div>
-                    <span className="bg-red-955 text-red-400 border border-red-600/50 text-[10px] font-bold px-2.5 py-0.5 rounded tracking-wider uppercase animation-pulse">
-                      Purged / Deleted
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-red-500 font-mono leading-normal bg-red-950/20 p-2 rounded border border-red-500/10">
-                    Warning: Admission to the us-west1 cluster is blocked entirely. All game logic, client entry ports, and dynamic server handshakes for this region have been permanently severed and deleted.
-                  </p>
-                </div>
               </div>
 
               {/* Simulated Terminal */}
@@ -3025,12 +3869,11 @@ export default function App() {
                   <span className="flex items-center gap-1"><Terminal className="h-3 w-3" /> Core Terminal Logs</span>
                   <span>SSL SECURE</span>
                 </div>
-                <pre className="font-mono text-[10px] text-red-400 line-clamp-4 space-y-0.5 leading-snug">
-                  {`> sudo sysctl --disable-cluster region=us-west1
-[INFO] Shutting down node pool "us-west1-gkey-eq3"...
-[INFO] Evacuating dynamic state storage from us-west1... Done.
-[SUCCESS] Cluster "us-west1" successfully deleted from MMO realm indexes!
-[ALERT] Zero client traffic permitted for regional identifiers containing 'us-west1'`}
+                <pre className="font-mono text-[10px] text-green-400 line-clamp-4 space-y-0.5 leading-snug">
+                  {`> ping europe-west2.run.app
+[INFO] Routing operational...
+[INFO] Latency 14ms
+[SUCCESS] Cluster systems nominal!`}
                 </pre>
               </div>
 
@@ -3110,6 +3953,17 @@ export default function App() {
                <span className="font-bold text-amber-400 text-[9px] md:text-xs font-mono drop-shadow-[1px_1px_0_#000]">{character.gold}</span>
             </div>
             {/* Settings etc */}
+            <button
+               onClick={() => {
+                 triggerHaptic.light();
+                 shareTelegramInvite(character?.name || 'Искатель', character?.level || 1, character?.class || 'Воин');
+               }}
+               className="h-6 px-1.5 md:px-2 md:h-7 flex items-center justify-center gap-1 bg-sky-950/80 hover:bg-sky-900 border border-sky-800 text-sky-400 hover:text-sky-300 rounded cursor-pointer transition-colors shadow text-[9px] md:text-[10px] font-bold"
+               title="Позвать друзей в Telegram"
+            >
+               <Send className="h-2.5 w-2.5 md:h-3 md:w-3 transform -rotate-12" />
+               <span>{language === 'ru' ? 'Позвать' : 'Invite'}</span>
+            </button>
             <button
                onClick={() => setLanguage(language === 'ru' ? 'en' : 'ru')}
                className="h-6 w-6 md:h-7 md:w-7 flex items-center justify-center font-bold bg-slate-800/80 hover:bg-slate-700 backdrop-blur text-slate-300 rounded cursor-pointer transition-all border border-slate-600 text-[9px] md:text-[10px] shadow"
@@ -3397,6 +4251,8 @@ export default function App() {
                   handleCombatAction={handleCombatAction}
                   currentSpells={currentSpells}
                   spellCooldowns={spellCooldowns}
+                  monsterCasting={monsterCasting}
+                  combatPlayerDebuffs={combatPlayerDebuffs}
                />
             ) : (
               /* TAB 1: Explorations & Fighting Monsters */
@@ -3500,6 +4356,7 @@ export default function App() {
                   MAP_COLS={MAP_COLS}
                   MAP_ROWS={MAP_ROWS}
                   isObstacle={isObstacle}
+                  onlinePlayers={onlinePlayers}
                 />
 
                 {/* Fast Travel & Transport Hub */}
@@ -3860,10 +4717,10 @@ export default function App() {
                                     {stage.rewards.item && <span>Предмет: <span className="text-cyan-400 font-bold">Снаряжение героя</span></span>}
                                   </div>
                                   <button
-                                    onClick={() => triggerAlert('Функция прохождения сюжета временно недоступна в демо-версии. (Можно привязать к боевой системе).', 'info')}
-                                    className="bg-amber-600 hover:bg-amber-500 text-slate-900 font-black px-4 py-2 rounded text-xs transition-colors cursor-pointer"
+                                    onClick={() => handleStartMsqStage(stage)}
+                                    className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-slate-950 font-extrabold px-5 py-2.5 rounded shadow-lg hover:shadow-amber-500/10 cursor-pointer transform hover:-translate-y-0.5 transition-all outline outline-1 outline-amber-400/20 active:scale-95 text-xs flex items-center gap-1.5"
                                   >
-                                    Перейти к заданию
+                                    {stage.type === 'dialogue' ? '💬 Начать Диалог' : stage.type === 'combat' ? '⚔️ Сразиться' : '🧭 Начать Исследование'}
                                   </button>
                                </div>
                              )}

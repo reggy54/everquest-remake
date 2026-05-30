@@ -72,11 +72,12 @@ export default function MerchantTab({ character, handlePurchaseItem, language }:
                onChange={(e) => setMerchantFilterRarity(e.target.value)}
                className="bg-[#222] border border-[#555] text-amber-500 font-bold px-2 py-1 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] uppercase text-xs outline-none focus:border-amber-400 focus:text-amber-400"
             >
-               <option value="all">Все редкости</option>
-               <option value="common">Common</option>
-               <option value="uncommon">Uncommon</option>
-               <option value="rare">Rare</option>
-               <option value="epic">Epic</option>
+               <option value="all">{language === 'ru' ? 'Все редкости' : 'All Rarities'}</option>
+               <option value="common">{language === 'ru' ? 'Обычное' : 'Common'}</option>
+               <option value="uncommon">{language === 'ru' ? 'Необычное' : 'Uncommon'}</option>
+               <option value="rare">{language === 'ru' ? 'Редкое' : 'Rare'}</option>
+               <option value="epic">{language === 'ru' ? 'Эпическое' : 'Epic'}</option>
+               <option value="legendary">{language === 'ru' ? 'Легендарное' : 'Legendary'}</option>
             </select>
 
             <select 
@@ -84,10 +85,20 @@ export default function MerchantTab({ character, handlePurchaseItem, language }:
                onChange={(e) => setMerchantFilterClass(e.target.value)}
                className="bg-[#222] border border-[#555] text-amber-500 font-bold px-2 py-1 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] uppercase text-xs outline-none focus:border-amber-400 focus:text-amber-400"
             >
-               <option value="all">Все классы</option>
-               {['Warrior','Paladin','Cleric','Mage','Rogue','Druid'].map(cls => (
-                 <option key={cls} value={cls}>{cls}</option>
-               ))}
+               <option value="all">{language === 'ru' ? 'Все классы' : 'All Classes'}</option>
+               {['Warrior','Paladin','Cleric','Mage','Rogue','Druid'].map(cls => {
+                 const clsNames: { [key: string]: string } = {
+                   'Warrior': language === 'ru' ? 'Воин' : 'Warrior',
+                   'Paladin': language === 'ru' ? 'Паладин' : 'Paladin',
+                   'Cleric': language === 'ru' ? 'Клирик' : 'Cleric',
+                   'Mage': language === 'ru' ? 'Маг' : 'Mage',
+                   'Rogue': language === 'ru' ? 'Разбойник' : 'Rogue',
+                   'Druid': language === 'ru' ? 'Друид' : 'Druid'
+                 };
+                 return (
+                   <option key={cls} value={cls}>{clsNames[cls] || cls}</option>
+                 );
+               })}
             </select>
           </div>
           <div className="text-[#ffd700] text-xs font-bold self-center drop-shadow-[1px_1px_0_#000]">

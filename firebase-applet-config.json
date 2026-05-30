@@ -1,10 +1,10 @@
 {
-  "projectId": "prismatic-orb-mtgzl",
-  "appId": "1:274843751047:web:bda2a047da18ed81059e22",
-  "apiKey": "AIzaSyC_Hg_pVJATbYZrkRTwOfNfmlX4hJfkAUg",
-  "authDomain": "prismatic-orb-mtgzl.firebaseapp.com",
+  "projectId": "etheria-rpg",
+  "appId": "1:136371799050:web:81385fe5316e31e7f7cbf3",
+  "apiKey": "AIzaSyCVKO1GNNlUlqJZzQp-Md9znl_Vz5Z9X5U",
+  "authDomain": "etheria-rpg.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-74ad0af6-f1eb-4cfc-be5a-79431ec37f77",
-  "storageBucket": "prismatic-orb-mtgzl.firebasestorage.app",
-  "messagingSenderId": "274843751047",
+  "storageBucket": "etheria-rpg.firebasestorage.app",
+  "messagingSenderId": "136371799050",
   "measurementId": ""
 }

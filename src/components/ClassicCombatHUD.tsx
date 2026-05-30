@@ -13,12 +13,16 @@ interface ClassicCombatHUDProps {
   combatOver: boolean;
   victoryDetails: any;
   setInCombat: (val: boolean) => void;
-  comboField: { active: boolean };
+  comboField: { type: string; active: boolean };
   stamina: number;
   combatGcd: boolean;
   handleCombatAction: (actionType: 'melee' | 'taunt' | 'dodge' | Spell) => void;
   currentSpells: Spell[];
   spellCooldowns: Record<string, number>;
+  monsterCasting: { id: string; name: string; turnsLeft: number; damage: number } | null;
+  combatPlayerDebuffs: { id: string; name: string; type: 'poison' | 'stun' | 'bleed'; duration: number; value: number }[];
+  monsterFrozenTurns?: number;
+  monsterSuperconductTurns?: number;
 }
 
 export default function ClassicCombatHUD({
@@ -38,6 +42,10 @@ export default function ClassicCombatHUD({
   handleCombatAction,
   currentSpells,
   spellCooldowns,
+  monsterCasting,
+  combatPlayerDebuffs,
+  monsterFrozenTurns = 0,
+  monsterSuperconductTurns = 0,
 }: ClassicCombatHUDProps) {
   
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -175,9 +183,47 @@ export default function ClassicCombatHUD({
                     {Math.max(0, combatMonster.hp)} / {combatMonster.maxHp}
                  </span>
              </div>
-             <span className="text-[9px] text-[#ffdd00] mt-1 font-bold uppercase tracking-widest block bg-black/60 px-2 border border-[#333] rounded-sm drop-shadow-[1px_1px_0_#000]">
-                 {combatMonster.isBoss ? 'Boss' : 'Elite Enemy'}
-             </span>
+
+             {/* Monster Casting Bar */}
+             {monsterCasting && (
+                <div className="w-full mt-1.5 animate-pulse">
+                   <div className="flex justify-between text-[9px] font-mono font-bold text-amber-400 drop-shadow-[1px_1px_0_#000]">
+                      <span className="flex items-center gap-1">⚡ ЧТЕНИЕ ЗАКЛИНАНИЯ: {monsterCasting.name}</span>
+                      <span>{monsterCasting.turnsLeft === 1 ? 'СЛЕДУЮЩИЙ ХОД' : `${monsterCasting.turnsLeft} х.`}</span>
+                   </div>
+                   <div className="h-2.5 w-full bg-slate-950 border border-amber-600/50 rounded overflow-hidden relative p-[1px] mt-0.5">
+                      <div className="h-full bg-gradient-to-r from-red-600 via-amber-500 to-yellow-400 rounded-sm" style={{ width: '100%' }}></div>
+                   </div>
+                </div>
+             )}
+             <span className="text-[9px] text-[#ffdd00] mt-1 font-bold uppercase tracking-widest block bg-black/60 px-2 border border-[#333] rounded-sm">{combatMonster.isBoss ? 'Boss' : 'Elite Enemy'}
+              </span>
+              <div className="flex gap-1.5 flex-wrap mt-[5px] justify-end w-full">
+                  {comboField.active && (
+                      <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 border rounded-sm drop-shadow-[1px_1px_0_#000] flex items-center gap-1 ${
+                          comboField.type === 'fire' ? 'bg-red-950/75 border-red-500 text-red-300 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse' :
+                          comboField.type === 'ice' ? 'bg-cyan-950/75 border-cyan-500 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.6)] animate-pulse' :
+                          comboField.type === 'lightning' ? 'bg-purple-950/75 border-purple-500 text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.6)] animate-pulse' :
+                          comboField.type === 'earth' ? 'bg-yellow-950/75 border-yellow-600 text-yellow-300 shadow-[0_0_8px_rgba(202,138,4,0.6)] animate-pulse' :
+                          'bg-slate-900 border-slate-500 text-slate-300'
+                      }`}>
+                          {comboField.type === 'fire' ? '🔥 PYRO' :
+                           comboField.type === 'ice' ? '❄️ CRYO' :
+                           comboField.type === 'lightning' ? '⚡ ELECTRO' :
+                           comboField.type === 'earth' ? '🪨 GEO' : '🔮 SPECTRUM'}
+                      </span>
+                  )}
+                  {monsterFrozenTurns > 0 && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest bg-sky-900/80 border border-sky-400 text-sky-200 px-2 py-0.5 rounded-sm drop-shadow-[1px_1px_0_#000] animate-bounce flex items-center gap-1 shadow-[0_0_8px_#38bdf8]">
+                          ❄️ ЗАМОРОЗКА ({monsterFrozenTurns} х.)
+                      </span>
+                  )}
+                  {monsterSuperconductTurns > 0 && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest bg-fuchsia-950/80 border border-fuchsia-500 text-fuchsia-300 px-2 py-0.5 rounded-sm drop-shadow-[1px_1px_0_#000] animate-pulse flex items-center gap-1 shadow-[0_0_8px_#d946ef]">
+                          ⚡ УЯЗВИМОСТЬ ({monsterSuperconductTurns} х.)
+                      </span>
+                  )}
+              </div>
           </div>
           
           <div className="w-16 h-16 shrink-0 rounded-full border-[3px] border-[#666] bg-[#222] overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.8)] relative z-10 flex items-center justify-center">
@@ -290,9 +336,7 @@ export default function ClassicCombatHUD({
                     <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/player:opacity-100 transition-opacity">
                        <span className="text-[8px] font-mono font-bold text-white drop-shadow-[1px_1px_0_#000]">{character.mana || stamina} {resourceLabel}</span>
                     </div>
-                 </div>
-
-             </div>
+                 </div></div>
          </div>
       </div>
 
@@ -313,6 +357,20 @@ export default function ClassicCombatHUD({
                 <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-48 bg-[#111] border border-metal p-2 shadow-[0_5px_15px_rgba(0,0,0,1)] z-50 pointer-events-none">
                     <span className="text-yellow-400 font-bold text-[11px] block" style={{ fontFamily: 'Friz Quadrata, serif' }}>{buff.name}</span>
                     <span className="text-[10px] text-slate-300 block">{buff.effect}</span>
+                </div>
+             </div>
+          ))}
+          {combatPlayerDebuffs && combatPlayerDebuffs.map(deb => (
+             <div key={deb.id} className="relative group w-8 h-8 rounded border-2 border-rose-600 bg-gradient-to-br from-[#2a0404] to-[#111] shadow-lg flex items-center justify-center cursor-help animate-pulse">
+                <span className="text-sm">{deb.type === 'poison' ? '🤢' : deb.type === 'stun' ? '🌀' : '🩸'}</span>
+                <div className="absolute -bottom-1 -right-1 text-[9px] font-mono font-bold bg-black px-1 border border-rose-950 rounded-sm text-rose-400 z-10 scale-90 origin-bottom-right">
+                   {deb.duration}
+                </div>
+                {/* Tooltip */}
+                <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-[220px] bg-[#1a0808] border border-rose-900 p-2 shadow-[0_5px_15px_rgba(0,0,0,1)] z-50 pointer-events-none rounded text-left">
+                    <span className="text-rose-400 font-bold text-[11.5px] block">{deb.name}</span>
+                    <span className="text-[10px] text-slate-300 block">Тип: {deb.type === 'poison' ? 'Отравление' : deb.type === 'stun' ? 'Оглушение' : 'Кровотечение'}</span>
+                    <span className="text-[10.5px] text-rose-300/90 block mt-1">Каждый ход наносит: -{deb.value} HP.</span>
                 </div>
              </div>
           ))}
@@ -373,9 +431,7 @@ export default function ClassicCombatHUD({
                      </button>
                  )
              })}
-         </div>
-
-      </div>
+         </div></div>
 
     </div>
   );

@@ -70,7 +70,17 @@ const RU_RACE_DESC: Record<CharacterRace, string> = {
 };
 
 export default function CharacterCreator({ onCreated, language = 'ru' }: CharacterCreatorProps) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser) {
+        const suggested = tgUser.username || tgUser.first_name || '';
+        // Sanitize name to include only letters, numbers, and underscores
+        return suggested.replace(/[^a-zA-Z0-9А-Яа-я_]/g, '');
+      }
+    }
+    return '';
+  });
   const [selectedRace, setSelectedRace] = useState<CharacterRace>('Human');
   const [selectedClass, setSelectedClass] = useState<CharacterClass>('Warrior');
   const [selectedDeity, setSelectedDeity] = useState<string>(SYSTEM_DEITIES[0]);

@@ -107,6 +107,7 @@ export default function BankTab({ character, language, onUpdateCharacter, trigge
            createdAt: Date.now()
         });
     } catch(err) {
+        handleFirestoreError(err, OperationType.CREATE, 'bank_items');
         triggerAlert('Error depositing.', 'error');
     }
   };
@@ -129,6 +130,7 @@ export default function BankTab({ character, language, onUpdateCharacter, trigge
        onUpdateCharacter(updatedChar);
        triggerAlert(language === 'ru' ? `Получено: ${bankRecord.item.name}` : `Withdrawn: ${bankRecord.item.name}`, 'success');
     } catch(err) {
+       handleFirestoreError(err, OperationType.DELETE, `bank_items/${bankRecord.id}`);
        triggerAlert('Someone else might have claimed it!', 'error');
     }
   };

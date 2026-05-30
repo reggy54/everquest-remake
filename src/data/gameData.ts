@@ -448,6 +448,25 @@ export const COMMON_TEMPLATES = {
     { id: 'mana-ring', name: 'Сверкающее платиновое кольцо', slot: 'secondary', description: 'Сверкающий перстень, наделенный чистой эссенцией маны.', price: 75, rarity: 'rare', stats: { int: 5, wis: 5, mana: 30 }, allowedClasses: ['Mage', 'Summoner', 'Priest', 'Shaman'] },
     { id: 'rubicund-breastplate', name: 'Рубиновый нагрудник', slot: 'chest', description: 'Легендарный сияющий доспех защитников Этернии.', price: 250, rarity: 'epic', stats: { str: 10, sta: 12, ac: 25, hp: 80 }, allowedClasses: ['Warrior', 'Paladin', 'Priest'] },
     { id: 'ghoulbane', name: 'Клирик-Паладинский Бич Проклятых', slot: 'primary', description: 'Легендарный сияющий клинок праведного гнева, наносящий двойной урон нежити.', price: 400, rarity: 'epic', stats: { str: 14, wis: 8, ac: 10, hp: 50 }, allowedClasses: ['Paladin', 'Priest'] },
+
+    // Legendary & Special Additions
+    { id: 'leg-tfury', name: 'Громовая Ярость, Благословенный клинок Искателя Ветра', slot: 'primary', description: 'Легендарный длинный меч, наделенный силой заточённого принца воздуха. Сверкает молниями.', price: 1500, rarity: 'legendary', stats: { str: 22, agi: 22, sta: 15, ac: 15 }, allowedClasses: ['Warrior', 'Paladin', 'Rogue'] },
+    { id: 'leg-atiesh', name: 'Атиеш, Большой посох Хранителя', slot: 'primary', description: 'Древний посох, передаваемый величайшим магам Азерота. Излучает чистейшую арканную силу.', price: 1800, rarity: 'legendary', stats: { int: 35, wis: 35, mana: 150, hp: 80 }, allowedClasses: ['Mage', 'Priest'] },
+    { id: 'leg-thoridal', name: 'Тори\'дал, Ярость Звезд', slot: 'primary', description: 'Волшебный лук, не требующий стрел — он материализует снаряды из самого звёздного света.', price: 1400, rarity: 'legendary', stats: { agi: 30, dex: 25, hp: 60 }, allowedClasses: ['Ranger', 'Rogue'] },
+    { id: 'leg-bulwark', name: 'Мерцающий Оплот Аззинота', slot: 'secondary', description: 'Легендарный ростовой щит из монолитного чёрного обсидиана, выдерживающий удары полубогов.', price: 1300, rarity: 'legendary', stats: { sta: 45, str: 12, ac: 75, hp: 120 }, allowedClasses: ['Warrior', 'Paladin'] },
+    { id: 'leg-shadowmourne', name: 'Темная Скорбь', slot: 'primary', description: 'Грозный топор, выкованный из сверкающего темного льда и душ павших великанов.', price: 2100, rarity: 'legendary', stats: { str: 48, sta: 32, hp: 150 }, allowedClasses: ['Warrior', 'Paladin'] },
+    { id: 'leg-valanyr', name: 'Вала\'нир, Молот Древних Королей', slot: 'primary', description: 'Реликвия титанов, способная затягивать тяжелейшие раны священным нерушимым щитом.', price: 1650, rarity: 'legendary', stats: { wis: 32, sta: 25, mana: 120, hp: 100 }, allowedClasses: ['Priest', 'Shaman', 'Cleric'] },
+    
+    // Epic armor & Accessories
+    { id: 'epic-ch-crown', name: 'Корона Повелителя Огня', slot: 'head', description: 'Корона из вечно пылающих углей, добытая из Сердца Недр Рагнароса.', price: 650, rarity: 'epic', stats: { int: 18, wis: 12, mana: 80 }, allowedClasses: ['Mage', 'Summoner', 'Shaman'] },
+    { id: 'epic-arm-hands', name: 'Рукавицы Аннигиляции', slot: 'hands', description: 'Стальные латные перчатки, в которых каждый замах обретает сокрушительную инерцию.', price: 530, rarity: 'epic', stats: { str: 15, agi: 12, sta: 12, ac: 8 }, allowedClasses: ['Warrior', 'Paladin', 'Rogue'] },
+    { id: 'epic-acc-ring', name: 'Кольцо Черного Прилива', slot: 'ring1', description: 'Тяжелый перстень с огромным синим корундиумом. Вы чувствуете ритм океанских бурь.', price: 480, rarity: 'epic', stats: { int: 10, wis: 10, sta: 12, mana: 60 } },
+    { id: 'epic-acc-neck', name: 'Ожерелье Ткача Грез', slot: 'amulet', description: 'Изумрудный кулон, в котором заключено вечное созидательное спокойствие Изумрудного Сна.', price: 520, rarity: 'epic', stats: { wis: 14, int: 14, mana: 75, hp: 40 } },
+    
+    // Consumables & High-Value resources (available as general items)
+    { id: 'pot-ultimate-power', name: 'Эликсир Абсолютной Силы', slot: 'waist', description: 'Мощнейшее зелье алхимиков, мгновенно повышающее все боевые характеристики.', price: 95, rarity: 'epic', stats: { str: 6, int: 6, sta: 6, hp: 30, mana: 30 } },
+    { id: 'res-rune-fate', name: 'Руна Вечной Судьбы', slot: 'waist', description: 'Сверкающий рунический камень. Используется для изменения и закалки судеб.', price: 180, rarity: 'rare', stats: { str: 5, int: 5, wis: 5, agi: 5 } },
+    { id: 'res-arcanite-bar', name: 'Слиток Арканита', slot: 'secondary', description: 'Тяжелый слиток редкого зачарованного металла, используемый в легендарной ковке.', price: 120, rarity: 'rare', stats: { sta: 8, ac: 15 } }
   ] as Item[],
 
   simulatedNames: [

@@ -1,6 +1,6 @@
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
+import fs from 'fs';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 
@@ -292,7 +292,7 @@ Format return JSON:
 }`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -382,7 +382,7 @@ Format return JSON:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -453,7 +453,7 @@ app.post('/api/gemini/player-impact', async (req, res) => {
 Пиши на русском языке, максимум 150 символов.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       contents: prompt
     });
 
@@ -553,7 +553,7 @@ Schema of rewardItem:
 Provide JSON output only.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -654,7 +654,7 @@ Output JSON containing an array "quests", where each has:
 Keep it immersive, translating game mechanics into story consequences. Language: Russian.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -733,7 +733,7 @@ Format standard output JSON:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -788,7 +788,7 @@ Keep it under 100 words. Return JSON:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -806,10 +806,10 @@ Keep it under 100 words. Return JSON:
     res.json(parsed);
   } catch (err: any) {
     if (err?.status === 429 || (err?.message && err.message.includes('429'))) {
-       console.warn('Gemini API Quota Exceeded (429) in making DM combat summary. Switching to fallback.');
+       console.warn('Gemini API Quota Exceeded (429) in combat round. Switching to fallback.');
        ai = null;
     } else {
-       console.warn('Error making DM combat summary: API Error or Rate Limit');
+       console.warn('DM narration fallback triggered:', err?.message || err);
     }
     res.json({
       description: `Стремительный обмен ударами в гуще боя! Пыль столбом. Вы продолжаете сражаться с врагом!`,
@@ -819,14 +819,18 @@ Keep it under 100 words. Return JSON:
 
 // Serve frontend assets
 async function startServer() {
+  const distPath = path.join(process.cwd(), 'dist');
+
   if (process.env.NODE_ENV !== 'production') {
+    console.log('Starting in Development mode with Vite Middleware...');
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    console.log('Starting in Production mode, serving static files from:', distPath);
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));

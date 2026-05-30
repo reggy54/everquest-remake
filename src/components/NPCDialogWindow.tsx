@@ -62,14 +62,29 @@ export default function NPCDialogWindow({ npc, text, options, onClose }: NPCDial
          </button>
 
          {/* Left Side: Portrait */}
-         <div className="w-[300px] h-full bg-[#111] border-[4px] border-[#443322] relative flex flex-col items-center justify-center shadow-[inset_0_0_30px_rgba(0,0,0,1)] rounded-l z-10">
-            {/* Metal Corners */}
-            <div className="absolute top-0 left-0 w-4 h-4 border-t-[4px] border-l-[4px] border-[#a68c70] m-1" />
-            <div className="absolute top-0 right-0 w-4 h-4 border-t-[4px] border-r-[4px] border-[#a68c70] m-1" />
-            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-[4px] border-l-[4px] border-[#a68c70] m-1" />
-            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-[4px] border-r-[4px] border-[#a68c70] m-1" />
+         <div className={`w-[300px] h-full border-[4px] relative flex flex-col items-center justify-center rounded-l z-10 transition-all ${
+            npc.storyImportant 
+              ? 'bg-[#151009] border-[#ffb600] shadow-[inset_0_0_40px_rgba(245,158,11,0.2),0_0_25px_rgba(245,158,11,0.15)] animate-pulse-subtle' 
+              : 'bg-[#111] border-[#443322] shadow-[inset_0_0_30px_rgba(0,0,0,1)]'
+         }`}>
+            {/* Main story badge banner */}
+            {npc.storyImportant && (
+               <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-400 text-slate-950 font-sans font-black text-[9px] uppercase tracking-widest px-3 py-1 rounded shadow-md border border-amber-300 pointer-events-none whitespace-nowrap z-30">
+                  📜 ОСНОВНОЙ СЮЖЕТ
+               </div>
+            )}
 
-            <div className="w-48 h-48 rounded-full border-[6px] border-[#3a2c20] shadow-[0_10px_20px_rgba(0,0,0,0.8)] overflow-hidden bg-slate-800 relative z-10 flex items-center justify-center group text-7xl">
+            {/* Metal Corners */}
+            <div className={`absolute top-0 left-0 w-4 h-4 border-t-[4px] border-l-[4px] m-1 ${npc.storyImportant ? 'border-[#ffd700]' : 'border-[#a68c70]'}`} />
+            <div className={`absolute top-0 right-0 w-4 h-4 border-t-[4px] border-r-[4px] m-1 ${npc.storyImportant ? 'border-[#ffd700]' : 'border-[#a68c70]'}`} />
+            <div className={`absolute bottom-0 left-0 w-4 h-4 border-b-[4px] border-l-[4px] m-1 ${npc.storyImportant ? 'border-[#ffd700]' : 'border-[#a68c70]'}`} />
+            <div className={`absolute bottom-0 right-0 w-4 h-4 border-b-[4px] border-r-[4px] m-1 ${npc.storyImportant ? 'border-[#ffd700]' : 'border-[#a68c70]'}`} />
+
+            <div className={`w-48 h-48 rounded-full border-[6px] shadow-[0_10px_20px_rgba(0,0,0,0.8)] overflow-hidden bg-slate-800 relative z-10 flex items-center justify-center group text-7xl transition-all ${
+               npc.storyImportant 
+                 ? 'border-[#ffb600] shadow-[0_0_30px_rgba(245,158,11,0.3)] animate-pulse' 
+                 : 'border-[#3a2c20]'
+            }`}>
                {npc.portraitUrl ? (
                  <img src={npc.portraitUrl} alt={npc.name} className="w-full h-full object-cover" />
                ) : (
@@ -79,9 +94,11 @@ export default function NPCDialogWindow({ npc, text, options, onClose }: NPCDial
                <div className="absolute inset-0 ring-inset ring-4 ring-black/50 pointer-events-none rounded-full" />
             </div>
 
-            <div className="mt-6 text-center px-4 relative z-10 bg-black/60 p-2 border border-[#3a2c20] rounded shadow">
+            <div className={`mt-6 text-center px-4 relative z-10 bg-black/60 p-2 border rounded shadow transition-all ${
+               npc.storyImportant ? 'border-[#ffb600]' : 'border-[#3a2c20]'
+            }`}>
                <h2 
-                 className="text-2xl font-bold text-[#ffb600] drop-shadow-[2px_2px_0_#000]" 
+                 className={`text-2xl font-bold drop-shadow-[2px_2px_0_#000] ${npc.storyImportant ? 'text-amber-400' : 'text-[#ffb600]'}`} 
                  style={{ fontFamily: 'Friz Quadrata, serif' }}
                >
                  {npc.name}

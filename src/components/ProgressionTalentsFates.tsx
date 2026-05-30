@@ -174,7 +174,7 @@ export default function ProgressionTalentsFates({ character, onUpdateCharacter, 
                          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-paper.png')] opacity-40 pointer-events-none" />
                          
                          {/* Tree Header */}
-                         <div className={`w-full py-6 px-4 border-b-[3px] ${tree.border} bg-[#0a0907]/80 flex flex-col items-center relative z-10 shadow-lg`}>
+                         <div className={`w-full py-6 px-4 border-b-[3px] ${tree.border} ${character.specialization === tree.title ? 'bg-[#3d2e1f]/80 shadow-[0_0_15px_rgba(212,175,55,0.4)]' : 'bg-[#0a0907]/80'} flex flex-col items-center relative z-10 shadow-lg`}>
                             {/* Metallic Frame for Icon */}
                             <div className={`w-16 h-16 rounded-md border-[3px] ${tree.border} bg-[#1a1714] flex items-center justify-center mb-3 shadow-[0_0_20px_rgba(0,0,0,0.8)] relative overflow-hidden`}>
                                <div className="absolute inset-0 pointer-events-none shadow-inner" />
@@ -188,6 +188,11 @@ export default function ProgressionTalentsFates({ character, onUpdateCharacter, 
 
                          {/* Tree Nodes */}
                          <div className="flex-1 w-full flex flex-col items-center pt-8 pb-12 relative z-10 space-y-12 min-h-[400px]">
+                            {character.specialization === tree.title && (
+                               <div className="absolute top-2 bg-gradient-to-r from-transparent via-[#d4af37]/80 to-transparent text-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest shadow-md w-full text-center">
+                                 Активная
+                               </div>
+                            )}
                             {/* Branch lines (simplified) */}
                             <div className="absolute inset-y-0 left-1/2 w-1 border-l-2 border-dashed border-[#5c4a3d] -translate-x-1/2 z-0 opacity-50" />
                             
